@@ -44,7 +44,7 @@ class CowboyTracker(CowboyBikeCoordinatedEntity, TrackerEntity):
         """Initialize the Tracker."""
         super().__init__(coordinator)
         self._attr_extra_state_attributes = {}
-        self._attr_unique_id = coordinator.config_entry.title + "foo"
+        self._attr_unique_id = coordinator.config_entry.title + "tracker"
         self._attr_name = None
 
     @property
