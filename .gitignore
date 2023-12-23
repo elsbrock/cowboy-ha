@@ -4,14 +4,15 @@ __pycache__
 *.egg-info
 */build/*
 */dist/*
-
+.venv
 
 # misc
 .coverage
 .vscode
 coverage.xml
 
+build
 
 # Home Assistant configuration
 config/*
-!config/configuration.yaml
+config/configuration.yaml
