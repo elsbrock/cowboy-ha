@@ -1,17 +1,17 @@
 {
   "domain": "cowboy",
   "name": "Cowboy",
-  "version": "1.0.0",
   "codeowners": [
     "@elsbrock"
   ],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/elsbrock/cowboy-ha",
-  "issue_tracker": "https://github.com/elsbrock/cowboy-ha/issues",
   "homekit": {},
   "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/elsbrock/cowboy-ha/issues",
   "requirements": [],
   "ssdp": [],
+  "version": "1.0.0",
   "zeroconf": []
 }
