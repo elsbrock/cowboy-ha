@@ -49,7 +49,7 @@ MIT. See the [LICENSE](LICENSE) file for more details.
 
 ## Credits
 
-Parts of the repository were copied over from [ludeeus/integration_blueprint/](https://github.com/ludeeus/integration_blueprint/) (MIT).
+Parts of the repository were copied over from [ludeeus/integration_blueprint](https://github.com/ludeeus/integration_blueprint/) (MIT).
 
 ---
 
