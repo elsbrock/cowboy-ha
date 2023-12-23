@@ -1,0 +1,232 @@
+
+@baseUrl = https://app-api.cowboy.bike
+
+# @name login
+
+POST {{baseUrl}}/auth/sign_in HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Client-Type: Android-App
+Client: Android-App
+
+{
+    "email": "john@example.com",
+    "password": "jonnyboi"
+}
+
+###
+
+@accessToken = {{login.response.headers.Access-Token}}
+@uid = {{login.response.headers.Uid}}
+@client = {{login.response.headers.Client}}
+@bikeId = {{login.response.body.data.bike.id}}
+
+###
+
+# @name logout
+
+DELETE {{baseUrl}}/auth/sign_out HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###########################
+
+# @name me
+GET {{baseUrl}}/users/me HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name me_badges
+GET {{baseUrl}}/users/me/badges HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name me_badges_recent
+GET {{baseUrl}}/users/me/badges/recent HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name me_records
+GET {{baseUrl}}/users/me/personal_records HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name me_places
+GET {{baseUrl}}/users/me/places HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###########################
+
+# @name bike
+GET {{baseUrl}}/bikes/{{bikeId}} HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name bike_status
+GET {{baseUrl}}/bikes/{{bikeId}}/status HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name bike_nicknames
+GET {{baseUrl}}/bikes/nicknames HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###########################
+
+# @name trips_offset
+GET {{baseUrl}}/trips/offset HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name trips_recent
+GET {{baseUrl}}/trips/recent HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name trips_metrics
+GET {{baseUrl}}/trips/metrics/stats HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name trips_highlights
+GET {{baseUrl}}/trips/highlights HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###########################
+
+# @name diagnostics_help
+GET {{baseUrl}}/diagnostics/help HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name dfcs_offset
+GET {{baseUrl}}/dfcs/offset HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name releases
+GET {{baseUrl}}/releases HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name crashes_current
+GET {{baseUrl}}/crashes/current HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name theft
+GET {{baseUrl}}/theft HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name smart_companions
+GET {{baseUrl}}/users/me/smart_companions HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}

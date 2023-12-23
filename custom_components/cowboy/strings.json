@@ -1,0 +1,50 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "username": "[%key:common::config_flow::data::username%]",
+          "password": "[%key:common::config_flow::data::password%]"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "total_distance": {
+        "name": "Mileage"
+      },
+      "total_duration": {
+        "name": "Time driven"
+      },
+      "total_co2_saved": {
+        "name": "Saved CO2"
+      },
+      "battery_state_of_charge": {
+        "name": "Remaining battery"
+      },
+      "pcb_battery_state_of_charge": {
+        "name": "Remaining battery (internal PCB)"
+      }
+    },
+    "binary_sensor": {
+      "stolen": {
+        "name": "Stolen"
+      },
+      "crashed": {
+        "name": "Crashed"
+      },
+      "update_available": {
+        "name": "Update available"
+      }
+    }
+  }
+}

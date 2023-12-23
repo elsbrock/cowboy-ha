@@ -1,0 +1,16 @@
+"""Constants for the cowboy integration."""
+
+DOMAIN = "cowboy"
+MANUFACTURER = "cowboy"
+CONF_API = "api"
+CONF_NAME = "nickname"
+CONF_AUTH = "auth"
+CONF_BIKE_COORDINATOR = "bike_coordinator"
+CONF_RELEASE_COORDINATOR = "release_coordinator"
+ATTRIBUTION = "Data provided by Cowboy"
+
+ATTR_LATITUDE = "latitude"
+ATTR_LONGITUDE = "longitude"
+ATTR_ACCURACY = "accuracy"
+ATTR_LOC_NAME = "location_name"
+ATTR_LOC_RECEIVED_AT = "location_received_at"

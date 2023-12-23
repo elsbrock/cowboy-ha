@@ -1,0 +1,50 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured"
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "password": "Password",
+                    "username": "Username"
+                }
+            }
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "crashed": {
+                "name": "Crashed"
+            },
+            "stolen": {
+                "name": "Stolen"
+            },
+            "update_available": {
+                "name": "Update available"
+            }
+        },
+        "sensor": {
+            "battery_state_of_charge": {
+                "name": "Remaining battery"
+            },
+            "pcb_battery_state_of_charge": {
+                "name": "Remaining battery (internal PCB)"
+            },
+            "total_co2_saved": {
+                "name": "Saved CO2"
+            },
+            "total_distance": {
+                "name": "Mileage"
+            },
+            "total_duration": {
+                "name": "Time driven"
+            }
+        }
+    }
+}
