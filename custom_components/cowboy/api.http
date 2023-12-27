@@ -68,6 +68,17 @@ Client: {{client}}
 
 ###
 
+# @name me_activities_trend
+GET {{baseUrl}}/users/me/activities/trend HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
 # @name me_records
 GET {{baseUrl}}/users/me/personal_records HTTP/1.1
 content-type: application/json
@@ -123,6 +134,15 @@ Client: {{client}}
 
 ###########################
 
+# @name trips
+GET {{baseUrl}}/trips HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
 # @name trips_offset
 GET {{baseUrl}}/trips/offset HTTP/1.1
 content-type: application/json
@@ -136,6 +156,17 @@ Client: {{client}}
 
 # @name trips_recent
 GET {{baseUrl}}/trips/recent HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+###
+
+# @name trips_chart
+GET {{baseUrl}}/trips/chart?from=2020-12-25T19:00:05Z&to=2023-12-27T19:00:05Z HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
@@ -230,3 +261,18 @@ Access-Token: {{accessToken}}
 Client-Type: Android-App
 Uid: {{uid}}
 Client: {{client}}
+
+###
+
+# @name dashboard_data
+POST {{baseUrl}}/dashboard_data HTTP/1.1
+content-type: application/json
+X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+Access-Token: {{accessToken}}
+Client-Type: Android-App
+Uid: {{uid}}
+Client: {{client}}
+
+{
+    "bike": "{{bikeId}}"
+}
