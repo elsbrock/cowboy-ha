@@ -34,7 +34,7 @@ Enter your Cowboy account credentials in the integration setup:
 - **Username**: The email address associated with your Cowboy account.
 - **Password**: Your Cowboy account password.
 
-The account password is stored by the integration in order to be able to renew the session. It does not leave your device. Uninstalling the integration will logout the session.
+The account password is stored by the integration in order to be able to renew the session. It is not used for other purposes. Uninstalling the integration will logout the session.
 
 > [!NOTE]
 > The integration polls the Cowboy bike for data updates every minute and checks for software release availability every hour.
