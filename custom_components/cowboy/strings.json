@@ -31,6 +31,9 @@
       "total_co2_saved": {
         "name": "Saved CO2"
       },
+      "battery_health": {
+        "name": "Battery health"
+      },
       "battery_state_of_charge": {
         "name": "Remaining battery"
       },

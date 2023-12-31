@@ -66,7 +66,6 @@ SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
         translation_key="pcb_battery_state_of_charge",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:battery-heart",
         entity_registry_visible_default=False,
     ),
     CowboySensorEntityDescription(
@@ -76,10 +75,19 @@ SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.DISTANCE,
         suggested_display_precision=0,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda data: data['battery_state_of_charge'] / 100 * next(
+        value_fn=lambda data: data['battery_state_of_charge'] / 100 * data['autonomy'],
+    ),
+    CowboySensorEntityDescription(
+        key="battery_health",
+        translation_key="battery_health",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        icon="mdi:battery-heart",
+        value_fn=lambda data: data['autonomy'] / next(
             (autonomy['full_battery_range'] for autonomy in data['autonomies'] if autonomy['ride_mode'] == data['last_ride_mode']),
             None
-        )
+        ) * 100
     ),
 )
 

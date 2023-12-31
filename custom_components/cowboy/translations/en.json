@@ -30,6 +30,9 @@
             }
         },
         "sensor": {
+            "battery_health": {
+                "name": "Battery health"
+            },
             "battery_state_of_charge": {
                 "name": "Remaining battery"
             },
