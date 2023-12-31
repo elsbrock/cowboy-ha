@@ -25,6 +25,8 @@ class CowboySensorEntityDescription(SensorEntityDescription):
     """Describes Cowboy sensor entity."""
 
     attrs: Callable[[dict[str, Any]], dict[str, Any]] = lambda data: {}
+    value_fn: Callable[[dict[str, Any]], StateType] | None = None
+
 
 
 SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
@@ -66,6 +68,18 @@ SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
         icon="mdi:battery-heart",
         entity_registry_visible_default=False,
     ),
+    CowboySensorEntityDescription(
+        key="remaining_range",
+        translation_key="remaining_range",
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        suggested_display_precision=0,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: data['battery_state_of_charge'] / 100 * next(
+            (autonomy['full_battery_range'] for autonomy in data['autonomies'] if autonomy['ride_mode'] == data['last_ride_mode']),
+            None
+        )
+    ),
 )
 
 
@@ -99,7 +113,12 @@ class CowboySensor(CowboyBikeCoordinatedEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self._attr_native_value = self.coordinator.data[self.entity_description.key]
+        if not self.entity_description.value_fn:
+            self._attr_native_value = self.coordinator.data[self.entity_description.key]
+        else:
+            self._attr_native_value = self.entity_description.value_fn(
+                self.coordinator.data
+            )
         self._attr_extra_state_attributes = self.entity_description.attrs(
             self.coordinator.data
         )

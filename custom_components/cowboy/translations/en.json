@@ -36,6 +36,9 @@
             "pcb_battery_state_of_charge": {
                 "name": "Remaining battery (internal PCB)"
             },
+            "remaining_range": {
+                "name": "Remaining range"
+            },
             "total_co2_saved": {
                 "name": "Saved CO2"
             },

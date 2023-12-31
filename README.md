@@ -12,11 +12,11 @@ Feedback and contributions welcome.
 Among others, the following sensors are available:
 
 - **Mileage Sensor**: Keeps track of your bike's total mileage.
+- **Remaining Range**: Indicates the estimated remaining range.
 - **Battery Level Sensor**: Monitors the current battery status.
 - **Usage duration**: Tracks the total usage duration of the bike.
 - **Software Update Alerts**: Notifies you of available software updates for your bike.
 - **Location Tracking**: Tracks the current position of your Cowboy bike.
-- ... and other.
 
 ## Installation via HACS
 
