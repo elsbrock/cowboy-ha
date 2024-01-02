@@ -4,9 +4,6 @@ This custom Home Assistant integration connects Home Assistant with your [Cowboy
 
 Feedback and contributions welcome.
 
-> [!WARNING]
-> The integration is working but considered unstable until a release has been made. It might have bugs or unexpected behaviors, or incompatible changes may require you to reinstall.
-
 ## Features
 
 Among others, the following sensors are available:
