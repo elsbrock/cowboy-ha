@@ -85,9 +85,20 @@ class CowboyUpdateBinarySensor(CowboyBinarySensor):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
+        """Handle updated data from the coordinator.
+        This sensor is on if there is a firmware update available and
+        the bike firmware is not the latest release. The firmware update
+        must not have status: testing."""
+        data = self.coordinator.data or {}
+        firmware = data.get("firmware", {})
+        firmware_name = firmware.get("name", "")
+        firmware_status = firmware.get("status", "")
+
+        device_info = self.coordinator.device_info or {}
+        sw_version = device_info.get("sw_version", "")
+
         self._attr_is_on = (
-            self.coordinator.data["firmware"]["name"]
-            != self.coordinator.device_info["sw_version"]
+            firmware_name != sw_version and firmware_status != "testing"
         )
+
         self.async_write_ha_state()
