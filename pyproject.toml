@@ -14,7 +14,7 @@ homeassistant = "^2023.12.3"
 # https://github.com/home-assistant/core/issues/95192
 urllib3 = "2.2.0"
 ruff = "^0.2.1"
-colorlog = "^6.8.0"
+colorlog = "^6.8.2"
 
 [build-system]
 requires = ["poetry-core"]
