@@ -2,6 +2,10 @@
 
 This custom Home Assistant integration connects Home Assistant with your [Cowboy](https://cowboy.com/) electric bike, providing insights and monitoring capabilities directly within your Home Automation setup.
 
+<p align="center">
+  <img width="640" alt="image" src="https://github.com/user-attachments/assets/0d2358c7-2448-48e1-bf67-4cd07ec34474">
+</p>
+
 Feedback and contributions welcome.
 
 ## Features
