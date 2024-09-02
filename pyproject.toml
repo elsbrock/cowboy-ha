@@ -12,7 +12,7 @@ homeassistant = "^2023.12.3"
 
 [tool.poetry.group.dev.dependencies]
 # https://github.com/home-assistant/core/issues/95192
-urllib3 = "2.2.1"
+urllib3 = "2.2.2"
 ruff = "^0.4.8"
 colorlog = "^6.8.2"
 
