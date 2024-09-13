@@ -41,7 +41,7 @@ class CowboyHub:
         try:
             self.cowboy_api = CowboyAPIClient()
             resp = self.cowboy_api.login(username, password)
-            self.name = resp["data"]["bike"]["nickname"]
+            self.name = resp["data"]["bike"]["nickname"] or resp["data“]["bike"]["model"]["name"]
         except HTTPError as http_err:
             if http_err.response.status_code == 401:
                 raise InvalidAuth
