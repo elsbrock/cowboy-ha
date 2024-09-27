@@ -22,12 +22,7 @@ Among others, the following sensors are available:
 
 ## Installation via HACS
 
-1. Open Home Assistant Community Store (HACS) in your Home Assistant.
-2. Go to "Integrations" and select "+ Explore & Download Repositories."
-3. Find and select "Cowboy".
-4. Click "Download this Repository with HACS".
-5. Restart Home Assistant.
-6. Navigate to the Integrations page, add the Cowboy integration, and provide your Cowboy account credentials.
+This integration is available in the default HACS catalog and can be installed directly.
 
 ## Configuration
 
