@@ -50,6 +50,9 @@
       },
       "update_available": {
         "name": "Update available"
+      },
+      "battery_inserted": {
+          "name": "Battery"
       }
     }
   }
