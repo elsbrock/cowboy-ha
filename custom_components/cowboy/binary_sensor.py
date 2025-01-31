@@ -26,6 +26,12 @@ SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
         icon="mdi:alert",
         device_class=BinarySensorDeviceClass.SAFETY,
     ),
+    CowboySensorEntityDescription(
+        key="battery_inserted",
+        translation_key="battery_inserted",
+        icon="mdi:battery",
+        device_class=BinarySensorDeviceClass.PLUG,
+    )
 )
 
 
