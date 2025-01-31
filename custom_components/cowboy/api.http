@@ -6,8 +6,8 @@
 POST {{baseUrl}}/auth/sign_in HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
-Client-Type: Android-App
-Client: Android-App
+Client-Type: HomeAssistant-App
+Client: HomeAssistant-App
 
 {
     "email": "john@example.com",
@@ -29,7 +29,7 @@ DELETE {{baseUrl}}/auth/sign_out HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -40,7 +40,7 @@ GET {{baseUrl}}/users/me HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -51,7 +51,7 @@ GET {{baseUrl}}/users/me/badges HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -62,7 +62,7 @@ GET {{baseUrl}}/users/me/badges/recent HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -73,7 +73,7 @@ GET {{baseUrl}}/users/me/activities/trend HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -84,7 +84,7 @@ GET {{baseUrl}}/users/me/personal_records HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -95,7 +95,7 @@ GET {{baseUrl}}/users/me/places HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -106,7 +106,7 @@ GET {{baseUrl}}/bikes/{{bikeId}} HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -117,7 +117,7 @@ GET {{baseUrl}}/bikes/{{bikeId}}/status HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -128,7 +128,7 @@ GET {{baseUrl}}/bikes/nicknames HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -139,7 +139,7 @@ GET {{baseUrl}}/trips HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -148,7 +148,7 @@ GET {{baseUrl}}/trips/offset HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -159,7 +159,7 @@ GET {{baseUrl}}/trips/recent HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -170,7 +170,7 @@ GET {{baseUrl}}/trips/chart?from=2020-12-25T19:00:05Z&to=2023-12-27T19:00:05Z HT
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -181,7 +181,7 @@ GET {{baseUrl}}/trips/metrics/stats HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -192,7 +192,7 @@ GET {{baseUrl}}/trips/highlights HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -203,7 +203,7 @@ GET {{baseUrl}}/diagnostics/help HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -214,7 +214,7 @@ GET {{baseUrl}}/dfcs/offset HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -225,7 +225,7 @@ GET {{baseUrl}}/releases HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -236,7 +236,7 @@ GET {{baseUrl}}/crashes/current HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -247,7 +247,7 @@ GET {{baseUrl}}/theft HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -258,7 +258,7 @@ GET {{baseUrl}}/users/me/smart_companions HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
@@ -269,7 +269,7 @@ POST {{baseUrl}}/dashboard_data HTTP/1.1
 content-type: application/json
 X-Cowboy-App-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 Access-Token: {{accessToken}}
-Client-Type: Android-App
+Client-Type: HomeAssistant-App
 Uid: {{uid}}
 Client: {{client}}
 
