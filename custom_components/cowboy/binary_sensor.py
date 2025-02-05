@@ -76,7 +76,7 @@ class CowboyBinarySensor(CowboyBikeCoordinatedEntity, BinarySensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self._attr_is_on = self.entity_description.attrs(self.coordinator.data)
+        self._attr_is_on = self.coordinator.data[self.entity_description.key]
         self.async_write_ha_state()
 
 
