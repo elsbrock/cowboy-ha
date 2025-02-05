@@ -8,7 +8,7 @@ class CowboyAPIClient:
         self.password = None
         self.base_url = "https://app-api.cowboy.bike"
         self.app_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-        self.client_type = "Android-App"
+        self.client_type = "HomeAssistant-App"
         self.access_token = None
         self.uid = None
         self.client = None
