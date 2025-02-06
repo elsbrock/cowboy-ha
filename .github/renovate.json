@@ -6,22 +6,23 @@
   "schedule": ["before 4am on monday"],
   "packageRules": [
     {
-      "matchUpdateTypes": ["patch", "pin", "digest"],
-      "labels": ["dependencies", "patch"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
       "automerge": true,
       "automergeType": "branch"
     },
     {
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "matchPackagePatterns": ["*"],
       "matchUpdateTypes": ["major"],
-      "labels": ["dependencies", "major"]
+      "labels": ["breaking"]
     },
     {
-      "matchUpdateTypes": ["minor"],
-      "labels": ["dependencies", "minor"],
-      "automerge": true,
-      "automergeType": "branch"
-    },
-    {
+      "matchPackagePatterns": ["*"],
       "matchSecurityUpdates": true,
       "labels": ["security"],
       "automerge": true,
@@ -35,3 +36,4 @@
   "prConcurrentLimit": 0,
   "rangeStrategy": "pin"
 }
+
