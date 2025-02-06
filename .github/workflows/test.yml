@@ -14,18 +14,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install "home-assistant==2024.2.0"
-          pip install pytest-homeassistant-custom-component
-          pip install .[dev]
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Run tests
         run: |
-          pytest tests/ -v --cov=custom_components.cowboy
+          nix develop --command pytest tests/ -v --cov=custom_components.cowboy
