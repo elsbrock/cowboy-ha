@@ -1,33 +1,52 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base"
+    "config:recommended"
   ],
-  "schedule": ["before 4am on monday"],
+  "schedule": [
+    "before 4am on monday"
+  ],
   "packageRules": [
     {
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "matchCurrentVersion": "!/^0/",
       "automerge": true,
       "automergeType": "branch"
     },
     {
-      "matchDepTypes": ["devDependencies"],
+      "matchDepTypes": [
+        "devDependencies"
+      ],
       "automerge": true,
       "automergeType": "branch"
     },
     {
-      "matchPackagePatterns": ["*"],
-      "matchUpdateTypes": ["major"],
-      "labels": ["breaking"]
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "labels": [
+        "breaking"
+      ],
+      "matchPackageNames": [
+        "*"
+      ]
     },
     {
-      "matchPackagePatterns": ["*"],
-      "matchUpdateTypes": ["security"],
-      "labels": ["security"],
+      "matchUpdateTypes": [
+        "security"
+      ],
+      "labels": [
+        "security"
+      ],
       "automerge": true,
       "automergeType": "branch",
-      "prCreation": "immediate"
+      "prCreation": "immediate",
+      "matchPackageNames": [
+        "*"
+      ]
     }
   ],
   "platformAutomerge": true,
@@ -36,4 +55,3 @@
   "prConcurrentLimit": 0,
   "rangeStrategy": "pin"
 }
-
