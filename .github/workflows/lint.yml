@@ -16,14 +16,12 @@ jobs:
         - name: "Checkout the repository"
           uses: "actions/checkout@v4.2.2"
 
-        - name: "Set up Python"
-          uses: actions/setup-python@v5.4.0
-          with:
-            python-version: "3.11"
-            cache: "pip"
+        - name: Install Nix
+          uses: DeterminateSystems/nix-installer-action@main
 
-        - name: "Install requirements"
-          run: python3 -m pip install poetry && poetry install --no-root
+        - name: Setup Nix cache
+          uses: DeterminateSystems/magic-nix-cache-action@main
 
-        - name: Ruff
-          run: poetry run ruff check .
+        - name: Run Ruff
+          run: |
+            nix develop --command bash -c "pip install -r requirements.txt && ruff check ."

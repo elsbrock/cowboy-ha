@@ -22,4 +22,4 @@ jobs:
 
       - name: Run tests
         run: |
-          nix develop --command pytest tests/ -v --cov=custom_components.cowboy
+          nix develop --command bash -c "pip install -r requirements.txt && pytest tests/ -v --cov=custom_components.cowboy"

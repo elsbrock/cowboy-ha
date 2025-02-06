@@ -37,6 +37,43 @@ The account password is stored by the integration in order to be able to renew t
 > [!NOTE]
 > The integration polls the Cowboy bike for data updates every minute and checks for software release availability every hour.
 
+## Development
+
+This project uses [Nix](https://nixos.org/) to manage development environments. This ensures consistent development environments across different machines.
+
+### Prerequisites
+
+1. Install Nix following the [official instructions](https://nixos.org/download.html)
+2. Enable [Flakes](https://nixos.wiki/wiki/Flakes#Enable_flakes) if you haven't already
+
+### Setting Up Development Environment
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/elsbrock/cowboy-ha.git
+   cd cowboy-ha
+   ```
+
+2. Enter the development environment:
+   ```bash
+   nix develop
+   ```
+
+   This will:
+   - Create a Python virtual environment
+   - Install all development dependencies
+   - Set up a basic Home Assistant configuration
+
+3. Start a development instance of Home Assistant:
+   ```bash
+   hass -c config
+   ```
+   Then visit http://localhost:8123 in your browser.
+
+### Running Tests
+
+The test suite can be run using pytest: `pytest tests/ -v`
+
 ## Disclaimer
 
 This integration is an independent project and not officially affiliated with Cowboy. "Cowboy" is a trademark and belongs to its respective owners. This project does not claim any official endorsement by Cowboy. Use at your own risk.
