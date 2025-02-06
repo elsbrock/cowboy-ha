@@ -5,7 +5,6 @@ description = ""
 authors = ["Simon Elsbrock <simon@iodev.org>"]
 license = "MIT"
 readme = "README.md"
-requires-python = ">=3.11"
 
 [tool.poetry.dependencies]
 python = "^3.11"
