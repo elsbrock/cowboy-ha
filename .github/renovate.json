@@ -23,7 +23,7 @@
     },
     {
       "matchPackagePatterns": ["*"],
-      "matchSecurityUpdates": true,
+      "matchUpdateTypes": ["security"],
       "labels": ["security"],
       "automerge": true,
       "automergeType": "branch",
