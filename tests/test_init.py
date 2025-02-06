@@ -1,12 +1,11 @@
 """Tests for cowboy integration."""
 from unittest.mock import patch
 import pytest
-from homeassistant import config_entries, setup
+from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 from homeassistant.helpers import device_registry as dr
 from custom_components.cowboy.const import DOMAIN
-from custom_components.cowboy._client import CowboyAPIClient
 
 # This is an example configuration entry
 MOCK_CONFIG = {
