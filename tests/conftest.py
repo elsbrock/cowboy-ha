@@ -1,5 +1,4 @@
 """Test configuration for cowboy integration."""
-import os
 import sys
 from pathlib import Path
 
