@@ -16,6 +16,7 @@ Among others, the following sensors are available:
 - **Remaining Range**: Indicates the estimated remaining range.
 - **Battery Level Sensor**: Monitors the current battery status.
 - **Battery Health**: Gives an indication of the battery's health.
+- **Battery Docked**: Weither or not the battery is inside the bike
 - **Usage Duration**: Tracks the total usage duration of the bike.
 - **Software Update Alerts**: Notifies you of available software updates for your bike.
 - **Location Tracking**: Tracks the current position of your Cowboy bike.
