@@ -21,6 +21,17 @@ colorlog = "^6.9.0"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[project]
+name = "cowboy-ha"
+version = "1.0.0"
+description = ""
+authors = [
+    { name = "Simon Elsbrock", email = "simon@iodev.org" }
+]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.11"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
