@@ -6,9 +6,27 @@
   "schedule": ["before 4am on monday"],
   "packageRules": [
     {
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "labels": ["dependencies", "patch"],
       "automerge": true,
       "automergeType": "branch"
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major"]
+    },
+    {
+      "matchUpdateTypes": ["minor"],
+      "labels": ["dependencies", "minor"],
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "matchSecurityUpdates": true,
+      "labels": ["security"],
+      "automerge": true,
+      "automergeType": "branch",
+      "prCreation": "immediate"
     }
   ],
   "platformAutomerge": true,

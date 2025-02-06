@@ -1,0 +1,76 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+categories:
+  - title: '🚨 Breaking Changes'
+    labels:
+      - 'breaking'
+    collapse-after: 5
+  - title: '🔒 Security Updates'
+    labels:
+      - 'security'
+    collapse-after: 5
+  - title: '🚀 Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+    collapse-after: 5
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+    collapse-after: 5
+  - title: '🧰 Maintenance'
+    labels:
+      - 'chore'
+      - 'dependencies'
+    collapse-after: 5
+
+# Add conventional commit support
+autolabeler:
+  - label: 'security'
+    title:
+      - '/^fix\(security\):/i'
+  - label: 'bug'
+    title:
+      - '/^fix:/i'
+  - label: 'feature'
+    title:
+      - '/^feat:/i'
+  - label: 'chore'
+    title:
+      - '/^chore:/i'
+  - label: 'breaking'
+    title:
+      - '/^BREAKING CHANGE:/i'
+      - '/!:/i'
+
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+      - 'breaking'
+  minor:
+    labels:
+      - 'minor'
+      - 'feature'
+      - 'enhancement'
+  patch:
+    labels:
+      - 'patch'
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+      - 'security'
+      - 'dependencies'
+      - 'chore'
+  default: patch
+
+template: |
+  ## What's Changed
+  $CHANGES
+
+  ## 👨‍💻 Contributors
+  $CONTRIBUTORS

@@ -1,15 +1,31 @@
 name: "Release"
 
 on:
+  # Trigger on published releases (manual releases)
   release:
     types:
       - "published"
+  # Trigger on merged PRs (for automated security updates)
+  pull_request:
+    types:
+      - "closed"
+    branches:
+      - "main"  # Only run on PRs targeting main branch
 
 permissions: {}
 
 jobs:
   release:
     name: "Release"
+    # Run if either:
+    # 1. It's a published release event
+    # 2. It's a merged Renovate PR with security label
+    if: |
+      (github.event_name == 'release') ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.merged == true &&
+       github.event.pull_request.user.login == 'renovate[bot]' &&
+       contains(github.event.pull_request.labels.*.name, 'security'))
     runs-on: "ubuntu-latest"
     permissions:
       contents: write
@@ -17,10 +33,49 @@ jobs:
       - name: "Checkout the repository"
         uses: "actions/checkout@v4.2.2"
 
+      - name: "Get version"
+        id: version
+        shell: "bash"
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            # Extract version from Renovate PR title
+            VERSION=$(echo "${{ github.event.pull_request.title }}" | grep -oP '(?<=to v)[0-9]+\.[0-9]+\.[0-9]+')
+            echo "version=v${VERSION}" >> $GITHUB_OUTPUT
+          fi
+
+      # For security updates, create a focused release
+      - name: "Create Security Release"
+        if: github.event_name == 'pull_request'
+        uses: release-drafter/release-drafter@v6
+        with:
+          version: ${{ steps.version.outputs.version }}
+          name: "🔒 Security Release ${{ steps.version.outputs.version }}"
+          tag: ${{ steps.version.outputs.version }}
+          publish: true
+          # Override template to only include the security update
+          template: |
+            ## 🔒 Security Update
+
+            - ${{ github.event.pull_request.title }} (#${{ github.event.pull_request.number }})
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Remove the security update from the existing draft release
+      - name: "Update Draft Release"
+        if: github.event_name == 'pull_request'
+        uses: release-drafter/release-drafter@v6
+        with:
+          version: next
+          publish: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: "Adjust version number"
         shell: "bash"
         run: |
-          yq -i -o json '.version="${{ github.event.release.tag_name }}"' \
+          yq -i -o json '.version="${{ steps.version.outputs.version }}"' \
             "${{ github.workspace }}/custom_components/cowboy/manifest.json"
 
       - name: "ZIP the integration directory"
@@ -32,4 +87,5 @@ jobs:
       - name: "Upload the ZIP file to the release"
         uses: softprops/action-gh-release@v2.2.1
         with:
+          tag_name: ${{ steps.version.outputs.version }}
           files: ${{ github.workspace }}/custom_components/cowboy/cowboy-ha.zip
