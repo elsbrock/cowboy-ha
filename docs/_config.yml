@@ -1,0 +1,13 @@
+remote_theme: pages-themes/cayman@v0.2.0
+plugins:
+- jekyll-remote-theme
+
+title: Cowboy Home Assistant Integration
+description: Connect your Cowboy e-bike with Home Assistant
+show_downloads: true
+google_analytics:
+
+sass:
+  style: compressed
+  sass_dir: assets/css
+theme: jekyll-theme-cayman

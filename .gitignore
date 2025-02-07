@@ -18,3 +18,8 @@ config/*
 config/configuration.yaml
 
 .direnv/
+
+docs/_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata

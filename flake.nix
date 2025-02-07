@@ -22,6 +22,9 @@
             pythonEnv
             git
             pre-commit
+            ruby
+            jekyll
+            bundler
           ];
 
           shellHook = ''
@@ -42,6 +45,8 @@
               touch .venv/.installed
             fi
 
+            (cd docs && bundle install)
+
             # Add .venv/bin to PATH
             export PATH="$PWD/.venv/bin:$PATH"
 
@@ -51,6 +56,7 @@
             echo "1. Run 'hass -c config' to start Home Assistant"
             echo "2. Visit http://localhost:8123 in your browser"
             echo "3. Run 'pytest tests/' to run tests"
+            echo "4. Run 'cd docs && bundle exec jekyll serve' to preview docs"
           '';
         };
       }

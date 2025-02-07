@@ -86,6 +86,10 @@ MIT. See the [LICENSE](LICENSE) file for more details.
 
 Parts of the repository were copied over from [ludeeus/integration_blueprint](https://github.com/ludeeus/integration_blueprint/) (MIT).
 
+## Documentation
+
+For more information, please visit [our GitHub Pages site](https://elsbrock.github.io/cowboy-ha/).
+
 ---
 
 *This integration is created and maintained by enthusiasts and is not a Cowboy official product.*
