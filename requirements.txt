@@ -1,10 +1,10 @@
-homeassistant>=2023.12.3
-pytest>=7.0
+homeassistant==2025.5.2
+pytest==8.3.5
 pytest-cov
-pytest-homeassistant-custom-component>=0.13.91
-pytest-asyncio>=0.21.0
+pytest-homeassistant-custom-component==0.13.245
+pytest-asyncio==0.26.0
 black
 pylint
 pre-commit
-ruff>=0.9.4
-colorlog>=6.9.0
+ruff==0.11.10
+colorlog==6.9.0
