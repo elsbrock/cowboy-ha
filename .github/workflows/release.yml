@@ -85,7 +85,7 @@ jobs:
           zip cowboy-ha.zip -r ./
 
       - name: "Upload the ZIP file to the release"
-        uses: softprops/action-gh-release@v2.3.2
+        uses: softprops/action-gh-release@v2.3.3
         with:
           tag_name: ${{ steps.version.outputs.version }}
           files: ${{ github.workspace }}/custom_components/cowboy/cowboy-ha.zip
