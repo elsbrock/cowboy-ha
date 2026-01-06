@@ -75,7 +75,12 @@ SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.DISTANCE,
         suggested_display_precision=0,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda data: data['battery_state_of_charge'] / 100 * data['autonomy'],
+        value_fn=lambda data: data['battery_state_of_charge'] / 100 * (
+            next(
+                (autonomy['full_battery_range'] for autonomy in data.get('autonomies', []) if autonomy['ride_mode'] == data.get('last_ride_mode')),
+                data.get('autonomy', 0)
+            )
+        ),
     ),
     CowboySensorEntityDescription(
         key="battery_health",
