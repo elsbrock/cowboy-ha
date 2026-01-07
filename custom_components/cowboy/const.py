@@ -1,5 +1,6 @@
 """Constants for the cowboy integration."""
 
+VERSION = "1.1.0"
 DOMAIN = "cowboy"
 MANUFACTURER = "cowboy"
 CONF_API = "api"

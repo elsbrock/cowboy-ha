@@ -4,6 +4,8 @@ from __future__ import annotations
 from datetime import timedelta
 import logging
 
+__version__ = "1.1.0"
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
