@@ -19,6 +19,8 @@ from .const import (
 )
 from .coordinator import CowboyBikeCoordinatedEntity, CowboyBikeUpdateCoordinator
 
+PARALLEL_UPDATES = 1
+
 
 async def async_setup_entry(
     hass: HomeAssistant,

@@ -13,6 +13,8 @@ from .const import CONF_BIKE_COORDINATOR, CONF_RELEASE_COORDINATOR, DOMAIN
 from .coordinator import CowboyBikeCoordinatedEntity, CowboyUpdateCoordinator
 from .sensor import CowboySensorEntityDescription
 
+PARALLEL_UPDATES = 1
+
 SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
     CowboySensorEntityDescription(
         key="stolen",

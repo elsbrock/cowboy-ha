@@ -28,6 +28,8 @@ from homeassistant.helpers.typing import StateType
 from .const import CONF_BIKE_COORDINATOR, DOMAIN
 from .coordinator import CowboyBikeCoordinatedEntity, CowboyBikeUpdateCoordinator
 
+PARALLEL_UPDATES = 1
+
 
 RIDE_MODE_OPTIONS = [
     "adaptive_eu",
