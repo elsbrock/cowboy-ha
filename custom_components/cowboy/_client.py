@@ -87,9 +87,6 @@ class CowboyAPIClient:
     def get_bike(self):
         return self._get_endpoint(f"/bikes/{self.bike_id}")
 
-    def get_bike_status(self):
-        return self._get_endpoint(f"/bikes/{self.bike_id}/status")
-
     def get_bike_nicknames(self):
         return self._get_endpoint("/bikes/nicknames")
 
