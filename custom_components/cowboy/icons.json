@@ -1,0 +1,18 @@
+{
+  "entity": {
+    "sensor": {
+      "last_ride_mode": {
+        "state": {
+          "adaptive_eu": "mdi:bike-fast",
+          "static_eu": "mdi:bike",
+          "static_offroad": "mdi:bike-pedal-mountain",
+          "adaptive_eco_eu": "mdi:leaf",
+          "adaptive_us": "mdi:bike-fast",
+          "static_us": "mdi:bike",
+          "adaptive_eco_us": "mdi:leaf",
+          "assistance_off": "mdi:bike-pedal"
+        }
+      }
+    }
+  }
+}
