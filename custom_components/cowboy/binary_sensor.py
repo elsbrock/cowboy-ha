@@ -58,6 +58,10 @@ async def async_setup_entry(
                     translation_key="update_available",
                     icon="mdi:update",
                     device_class=BinarySensorDeviceClass.UPDATE,
+                    # Superseded by the `update` platform entity. Kept
+                    # registered so existing automations don't break,
+                    # but disabled by default for new installs.
+                    entity_registry_enabled_default=False,
                 ),
             )
         ]
