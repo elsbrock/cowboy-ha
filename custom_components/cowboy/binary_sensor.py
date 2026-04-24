@@ -98,12 +98,17 @@ class CowboyUpdateBinarySensor(CowboyBinarySensor):
         must not have status: testing.
         """
         data = self.coordinator.data or {}
-        firmware = data.get("firmware", {})
-        firmware_name = firmware.get("name", "")
-        firmware_status = firmware.get("status", "")
+        # The API returns `null` (not just missing) for some keys in
+        # /releases (e.g. cockpit, wireless_charger). `firmware` itself
+        # has been observed null too, and `dict.get(k, default)` only
+        # uses the default when the key is *absent*, not when the value
+        # is None — hence `or {}` to guard against AttributeError.
+        firmware = data.get("firmware") or {}
+        firmware_name = firmware.get("name") or ""
+        firmware_status = firmware.get("status") or ""
 
         device_info = self.coordinator.device_info or {}
-        sw_version = device_info.get("sw_version", "")
+        sw_version = device_info.get("sw_version") or ""
 
         self._attr_is_on = (
             firmware_name != sw_version and firmware_status != "testing"
