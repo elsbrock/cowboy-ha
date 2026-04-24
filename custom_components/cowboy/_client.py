@@ -4,7 +4,7 @@ import requests
 
 
 class CowboyAPIClient:
-    def __init__(self) -> None:
+    def __init__(self, bike_id=None) -> None:
         self.password = None
         self.base_url = "https://app-api.cowboy.bike"
         self.app_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
@@ -14,10 +14,10 @@ class CowboyAPIClient:
         self.client = None
         self.token_expires = None
 
-        self.bike_id = None
-        self.model = None
-        self.nickname = None
-        self.serial_number = None
+        # When bike_id is provided, all per-bike endpoints use it regardless of
+        # which bike happens to be active in the login response. When it's
+        # None (initial config flow), login() backfills it from data.bike.id.
+        self.bike_id = bike_id
 
     def login(self, email, password):
         self.password = password
@@ -38,14 +38,8 @@ class CowboyAPIClient:
 
         json_response = response.json()
 
-        # store some stuff that is returned by the login already;
-        # coordinators use it to set up the device info. note that there
-        # can only be a single bike per account (as it looks like in the
-        # returned data), so we can just use this one here.
-
-        self.bike_id = json_response["data"]["bike"]["id"]
-        self.model = json_response["data"]["bike"]["model"]["name"]
-        self.serial_number = json_response["data"]["bike"]["serial_number"]
+        if self.bike_id is None:
+            self.bike_id = json_response["data"]["bike"]["id"]
 
         return json_response
 

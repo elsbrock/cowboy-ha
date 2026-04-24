@@ -14,7 +14,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
 from ._client import CowboyAPIClient
-from .const import CONF_AUTH, CONF_NAME, DOMAIN
+from .const import CONF_AUTH, CONF_BIKE_ID, CONF_NAME, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,6 +31,7 @@ class CowboyHub:
 
     cowboy_api = None
     name = None
+    bike_id = None
 
     def __init__(self) -> None:
         """Initialize."""
@@ -41,7 +42,9 @@ class CowboyHub:
         try:
             self.cowboy_api = CowboyAPIClient()
             resp = self.cowboy_api.login(username, password)
-            self.name = resp["data"]["bike"]["nickname"] or resp["data"]["bike"]["model"]["name"]
+            bike = resp["data"]["bike"]
+            self.bike_id = bike["id"]
+            self.name = bike["nickname"] or bike["model"]["name"]
         except HTTPError as http_err:
             if http_err.response.status_code == 401:
                 raise InvalidAuth
@@ -67,6 +70,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     return {
         f"{CONF_NAME}": hub.name,
         f"{CONF_AUTH}": hub.auth,
+        f"{CONF_BIKE_ID}": hub.bike_id,
         f"{CONF_USERNAME}": data[CONF_USERNAME],
         f"{CONF_PASSWORD}": data[CONF_PASSWORD],
     }
@@ -75,7 +79,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for cowboy."""
 
-    VERSION = 1
+    VERSION = 2
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -93,7 +97,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                await self.async_set_unique_id(info[CONF_NAME])
+                await self.async_set_unique_id(str(info[CONF_BIKE_ID]))
+                self._abort_if_unique_id_configured()
                 return self.async_create_entry(title=info[CONF_NAME], data=info)
 
         return self.async_show_form(
