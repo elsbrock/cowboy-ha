@@ -53,6 +53,34 @@
             },
             "total_duration": {
                 "name": "Time driven"
+            },
+            "seen_at": {
+                "name": "Last seen"
+            },
+            "last_ride_mode": {
+                "name": "Last ride mode",
+                "state": {
+                    "adaptive_eu": "Adaptive (EU)",
+                    "static_eu": "Static (EU)",
+                    "static_offroad": "Static (Off-road)",
+                    "adaptive_eco_eu": "Adaptive Eco (EU)",
+                    "adaptive_us": "Adaptive (US)",
+                    "static_us": "Static (US)",
+                    "adaptive_eco_us": "Adaptive Eco (US)",
+                    "assistance_off": "Assistance off"
+                }
+            },
+            "last_crash_started_at": {
+                "name": "Last crash"
+            },
+            "warranty_ends_at": {
+                "name": "Warranty ends"
+            },
+            "auto_lock": {
+                "name": "Auto-lock"
+            },
+            "displayed_speed": {
+                "name": "Speed limit"
             }
         }
     }

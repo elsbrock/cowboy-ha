@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -12,13 +13,39 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfMass, UnitOfTime
+from homeassistant.const import (
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfLength,
+    UnitOfMass,
+    UnitOfSpeed,
+    UnitOfTime,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
 from .const import CONF_BIKE_COORDINATOR, DOMAIN
 from .coordinator import CowboyBikeCoordinatedEntity, CowboyBikeUpdateCoordinator
+
+
+RIDE_MODE_OPTIONS = [
+    "adaptive_eu",
+    "static_eu",
+    "static_offroad",
+    "adaptive_eco_eu",
+    "adaptive_us",
+    "static_us",
+    "adaptive_eco_us",
+    "assistance_off",
+]
+
+
+def _parse_iso(value: str | None) -> datetime | None:
+    """ISO 8601 string → datetime, tolerant of missing/empty values."""
+    if not value:
+        return None
+    return datetime.fromisoformat(value)
 
 
 @dataclass
@@ -93,6 +120,57 @@ SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
             (autonomy['full_battery_range'] for autonomy in data['autonomies'] if autonomy['ride_mode'] == data['last_ride_mode']),
             None
         ) * 100
+    ),
+    CowboySensorEntityDescription(
+        key="seen_at",
+        translation_key="seen_at",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        icon="mdi:cloud-clock",
+        value_fn=lambda data: _parse_iso(data.get("seen_at")),
+    ),
+    CowboySensorEntityDescription(
+        key="last_ride_mode",
+        translation_key="last_ride_mode",
+        device_class=SensorDeviceClass.ENUM,
+        options=RIDE_MODE_OPTIONS,
+        icon="mdi:bike-fast",
+        value_fn=lambda data: data.get("last_ride_mode"),
+    ),
+    CowboySensorEntityDescription(
+        key="last_crash_started_at",
+        translation_key="last_crash_started_at",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:alert-circle-outline",
+        value_fn=lambda data: _parse_iso(data.get("last_crash_started_at")),
+    ),
+    CowboySensorEntityDescription(
+        key="warranty_ends_at",
+        translation_key="warranty_ends_at",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:shield-check-outline",
+        value_fn=lambda data: _parse_iso(data.get("warranty_ends_at")),
+    ),
+    CowboySensorEntityDescription(
+        key="auto_lock",
+        translation_key="auto_lock",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:lock-clock",
+        value_fn=lambda data: (data.get("pending_settings") or {}).get("auto_lock"),
+    ),
+    CowboySensorEntityDescription(
+        key="displayed_speed",
+        translation_key="displayed_speed",
+        device_class=SensorDeviceClass.SPEED,
+        native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:speedometer",
+        value_fn=lambda data: (
+            ((data.get("sku") or {}).get("features") or {}).get("displayed_speeds") or {}
+        ).get("default"),
     ),
 )
 
