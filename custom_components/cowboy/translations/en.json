@@ -90,6 +90,27 @@
             },
             "displayed_speed": {
                 "name": "Speed limit"
+            },
+            "last_trip_distance": {
+                "name": "Last trip distance"
+            },
+            "last_trip_ended_at": {
+                "name": "Last trip ended"
+            },
+            "last_trip_duration": {
+                "name": "Last trip duration"
+            },
+            "last_trip_co2_saved": {
+                "name": "Last trip CO2 saved"
+            },
+            "last_trip_calories": {
+                "name": "Last trip calories"
+            },
+            "last_trip_title": {
+                "name": "Last trip title"
+            },
+            "today_distance": {
+                "name": "Distance today"
             }
         },
         "update": {

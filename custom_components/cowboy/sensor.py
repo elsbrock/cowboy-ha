@@ -16,6 +16,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
     EntityCategory,
+    UnitOfEnergy,
     UnitOfLength,
     UnitOfMass,
     UnitOfSpeed,
@@ -24,9 +25,15 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_BIKE_COORDINATOR, DOMAIN
-from .coordinator import CowboyBikeCoordinatedEntity, CowboyBikeUpdateCoordinator
+from .const import ATTRIBUTION, CONF_BIKE_COORDINATOR, CONF_TRIPS_COORDINATOR, DOMAIN
+from .coordinator import (
+    CowboyBikeCoordinatedEntity,
+    CowboyBikeUpdateCoordinator,
+    CowboyTripsUpdateCoordinator,
+)
+
 
 PARALLEL_UPDATES = 1
 
@@ -44,10 +51,13 @@ RIDE_MODE_OPTIONS = [
 
 
 def _parse_iso(value: str | None) -> datetime | None:
-    """ISO 8601 string → datetime, tolerant of missing/empty values."""
+    """ISO 8601 string → datetime, tolerant of missing/malformed values."""
     if not value:
         return None
-    return datetime.fromisoformat(value)
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
 
 
 @dataclass
@@ -176,16 +186,96 @@ SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
 )
 
 
+def _last_trip_value(key: str) -> Callable[[dict[str, Any]], StateType]:
+    """Build a value function that returns last_trip[key] or None."""
+    def _fn(data: dict[str, Any]) -> StateType:
+        last_trip = data.get("last_trip")
+        if not last_trip:
+            return None
+        return last_trip.get(key)
+    return _fn
+
+
+def _last_trip_ended_at(data: dict[str, Any]) -> StateType:
+    """Return the parsed `ended_at` timestamp from the last trip, if any."""
+    last_trip = data.get("last_trip")
+    if not last_trip:
+        return None
+    return _parse_iso(last_trip.get("ended_at"))
+
+
+TRIPS_SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
+    CowboySensorEntityDescription(
+        key="last_trip_distance",
+        translation_key="last_trip_distance",
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        suggested_display_precision=1,
+        value_fn=_last_trip_value("distance"),
+    ),
+    CowboySensorEntityDescription(
+        key="last_trip_ended_at",
+        translation_key="last_trip_ended_at",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=_last_trip_ended_at,
+    ),
+    CowboySensorEntityDescription(
+        key="last_trip_duration",
+        translation_key="last_trip_duration",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_last_trip_value("moving_time"),
+    ),
+    CowboySensorEntityDescription(
+        key="last_trip_co2_saved",
+        translation_key="last_trip_co2_saved",
+        native_unit_of_measurement=UnitOfMass.GRAMS,
+        icon="mdi:cloud-check",
+        value_fn=_last_trip_value("co2_saved"),
+    ),
+    CowboySensorEntityDescription(
+        key="last_trip_calories",
+        translation_key="last_trip_calories",
+        native_unit_of_measurement=UnitOfEnergy.KILO_CALORIE,
+        device_class=SensorDeviceClass.ENERGY,
+        value_fn=_last_trip_value("calories_burned"),
+    ),
+    CowboySensorEntityDescription(
+        key="last_trip_title",
+        translation_key="last_trip_title",
+        icon="mdi:bike",
+        value_fn=_last_trip_value("title"),
+    ),
+    CowboySensorEntityDescription(
+        key="today_distance",
+        translation_key="today_distance",
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        device_class=SensorDeviceClass.DISTANCE,
+        suggested_display_precision=1,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        value_fn=lambda data: data.get("today_distance"),
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Cowboy sensor entries."""
-    cowboy_coordinator = hass.data[DOMAIN][config_entry.entry_id][CONF_BIKE_COORDINATOR]
-    async_add_entities(
+    entry_data = hass.data[DOMAIN][config_entry.entry_id]
+    cowboy_coordinator = entry_data[CONF_BIKE_COORDINATOR]
+    trips_coordinator = entry_data[CONF_TRIPS_COORDINATOR]
+    entities: list[SensorEntity] = [
         CowboySensor(cowboy_coordinator, description) for description in SENSOR_TYPES
+    ]
+    entities.extend(
+        CowboyTripsSensor(trips_coordinator, cowboy_coordinator.device_info, description)
+        for description in TRIPS_SENSOR_TYPES
     )
+    async_add_entities(entities)
 
 
 class CowboySensor(CowboyBikeCoordinatedEntity, SensorEntity):
@@ -216,3 +306,33 @@ class CowboySensor(CowboyBikeCoordinatedEntity, SensorEntity):
             self.coordinator.data
         )
         self.async_write_ha_state()
+
+
+class CowboyTripsSensor(
+    CoordinatorEntity[CowboyTripsUpdateCoordinator], SensorEntity
+):
+    """Representation of a Cowboy trip sensor."""
+
+    _attr_attribution = ATTRIBUTION
+    _attr_has_entity_name = True
+    entity_description: CowboySensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: CowboyTripsUpdateCoordinator,
+        device_info,
+        description: CowboySensorEntityDescription,
+    ) -> None:
+        """Initialize a Cowboy trips sensor."""
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._attr_device_info = device_info
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{description.key}"
+
+    @property
+    def native_value(self) -> StateType | datetime:
+        """Return the sensor value derived from coordinator data."""
+        data = self.coordinator.data or {}
+        if self.entity_description.value_fn:
+            return self.entity_description.value_fn(data)
+        return data.get(self.entity_description.key)
