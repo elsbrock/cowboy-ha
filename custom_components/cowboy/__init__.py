@@ -16,6 +16,7 @@ from .const import (
     CONF_BIKE_COORDINATOR,
     CONF_BIKE_ID,
     CONF_RELEASE_COORDINATOR,
+    CONF_SCAN_INTERVAL,
     DOMAIN,
     MANUFACTURER,
 )
@@ -54,7 +55,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         serial_number=bike.get("serial_number"),
     )
 
-    bike_coordinator = CowboyBikeUpdateCoordinator(hass, device, cowboy_api)
+    scan_interval = entry.options.get(CONF_SCAN_INTERVAL, 1)
+    bike_coordinator = CowboyBikeUpdateCoordinator(
+        hass, device, cowboy_api, update_interval=timedelta(minutes=scan_interval)
+    )
     release_coordinator = CowboyReleaseUpdateCoordinator(
         hass, device, cowboy_api, update_interval=timedelta(hours=1)
     )
@@ -68,6 +72,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         CONF_BIKE_COORDINATOR: bike_coordinator,
         CONF_RELEASE_COORDINATOR: release_coordinator,
     }
+
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -134,6 +140,11 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             pass
 
     return True
+
+
+async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload the entry when options change."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

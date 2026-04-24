@@ -1,11 +1,17 @@
 """Tests for cowboy integration."""
+from datetime import timedelta
 from unittest.mock import patch
 import pytest
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 from homeassistant.helpers import device_registry as dr, entity_registry as er
-from custom_components.cowboy.const import CONF_BIKE_ID, DOMAIN
+from custom_components.cowboy.const import (
+    CONF_BIKE_COORDINATOR,
+    CONF_BIKE_ID,
+    CONF_SCAN_INTERVAL,
+    DOMAIN,
+)
 
 MOCK_CONFIG = {
     CONF_USERNAME: "test@example.com",
@@ -130,6 +136,44 @@ async def test_setup_entry_fails_on_auth_error(hass: HomeAssistant):
 
         hass.config_entries._entries.pop(entry.entry_id)
         assert DOMAIN not in hass.data
+
+async def test_scan_interval_option_applied(hass: HomeAssistant):
+    """scan_interval from entry options is wired into the bike coordinator."""
+    with patch('custom_components.cowboy._client.requests') as mock_requests:
+        _configure_mock(mock_requests)
+
+        entry = config_entries.ConfigEntry(
+            version=2,
+            minor_version=1,
+            domain=DOMAIN,
+            title="Test",
+            data=MOCK_CONFIG,
+            source="test",
+            options={CONF_SCAN_INTERVAL: 5},
+            unique_id="123",
+            discovery_keys=set(),
+        )
+
+        hass.config_entries._entries[entry.entry_id] = entry
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+        bike_coordinator = hass.data[DOMAIN][entry.entry_id][CONF_BIKE_COORDINATOR]
+        assert bike_coordinator.update_interval == timedelta(minutes=5)
+
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
+
+        device_registry = dr.async_get(hass)
+        for device in dr.async_entries_for_config_entry(
+            device_registry, entry.entry_id
+        ):
+            device_registry.async_remove_device(device.id)
+
+        hass.config_entries._entries.pop(entry.entry_id)
+
+
 
 
 async def test_config_flow_validation(hass: HomeAssistant):

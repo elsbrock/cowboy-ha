@@ -65,11 +65,11 @@ Re-read on options change via an update listener that reloads the entry.
 ## Implementation checklist
 
 - [x] Write spec
-- [ ] Add `CONF_SCAN_INTERVAL` to `const.py`
-- [ ] Add `OptionsFlow` subclass and `async_get_options_flow` wiring in
+- [x] Add `CONF_SCAN_INTERVAL` to `const.py`
+- [x] Add `OptionsFlow` subclass and `async_get_options_flow` wiring in
       `config_flow.py`
-- [ ] Read `scan_interval` from `entry.options` in `async_setup_entry` and
+- [x] Read `scan_interval` from `entry.options` in `async_setup_entry` and
       pass to `CowboyBikeUpdateCoordinator`
-- [ ] Register update listener that reloads the entry on options change
-- [ ] Translation keys in `strings.json` and `translations/en.json`
-- [ ] Test asserting `update_interval` reflects `entry.options["scan_interval"]`
+- [x] Register update listener that reloads the entry on options change
+- [x] Translation keys in `strings.json` and `translations/en.json`
+- [x] Test asserting `update_interval` reflects `entry.options["scan_interval"]`

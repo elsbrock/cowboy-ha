@@ -17,6 +17,15 @@
             }
         }
     },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "scan_interval": "Polling interval (minutes)"
+                }
+            }
+        }
+    },
     "entity": {
         "binary_sensor": {
             "crashed": {
