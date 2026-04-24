@@ -135,7 +135,6 @@ SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
         translation_key="last_ride_mode",
         device_class=SensorDeviceClass.ENUM,
         options=RIDE_MODE_OPTIONS,
-        icon="mdi:bike-fast",
         value_fn=lambda data: data.get("last_ride_mode"),
     ),
     CowboySensorEntityDescription(
