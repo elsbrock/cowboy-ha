@@ -138,9 +138,10 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     try:  # noqa: SIM105
-        # logging out any of them suffices; we don't care which one
+        # Best-effort: invalidate the session on Cowboy's side. May 401 if
+        # the token already expired, which is fine.
         await hass.async_add_executor_job(
-            hass.data[DOMAIN][entry.entry_id][CONF_BIKE_COORDINATOR].logout
+            hass.data[DOMAIN][entry.entry_id][CONF_API].logout
         )
     except:  # noqa: E722
         # ignore any errors

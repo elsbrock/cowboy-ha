@@ -5,6 +5,7 @@ import requests
 
 class CowboyAPIClient:
     def __init__(self, bike_id=None) -> None:
+        self.email = None
         self.password = None
         self.base_url = "https://app-api.cowboy.bike"
         self.app_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
@@ -20,6 +21,7 @@ class CowboyAPIClient:
         self.bike_id = bike_id
 
     def login(self, email, password):
+        self.email = email
         self.password = password
         url = f"{self.base_url}/auth/sign_in"
         headers = {
@@ -48,7 +50,7 @@ class CowboyAPIClient:
         return current_time >= self.token_expires
 
     def _renew_token(self):
-        self.login(self.uid, self.password)
+        self.login(self.email, self.password)
 
     def logout(self):
         if not self.access_token or not self.uid or not self.client:
