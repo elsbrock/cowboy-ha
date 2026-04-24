@@ -9,6 +9,7 @@ CONF_BIKE_ID = "bike_id"
 CONF_BIKE_COORDINATOR = "bike_coordinator"
 CONF_RELEASE_COORDINATOR = "release_coordinator"
 CONF_SCAN_INTERVAL = "scan_interval"
+CONF_TRIPS_COORDINATOR = "trips_coordinator"
 ATTRIBUTION = "Data provided by Cowboy"
 
 ATTR_LATITUDE = "latitude"

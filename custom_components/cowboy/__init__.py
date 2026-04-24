@@ -17,10 +17,15 @@ from .const import (
     CONF_BIKE_ID,
     CONF_RELEASE_COORDINATOR,
     CONF_SCAN_INTERVAL,
+    CONF_TRIPS_COORDINATOR,
     DOMAIN,
     MANUFACTURER,
 )
-from .coordinator import CowboyBikeUpdateCoordinator, CowboyReleaseUpdateCoordinator
+from .coordinator import (
+    CowboyBikeUpdateCoordinator,
+    CowboyReleaseUpdateCoordinator,
+    CowboyTripsUpdateCoordinator,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,15 +67,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     release_coordinator = CowboyReleaseUpdateCoordinator(
         hass, device, cowboy_api, update_interval=timedelta(hours=1)
     )
+    trips_coordinator = CowboyTripsUpdateCoordinator(
+        hass, device, cowboy_api, update_interval=timedelta(minutes=15)
+    )
 
     await bike_coordinator.async_config_entry_first_refresh()
     await release_coordinator.async_config_entry_first_refresh()
+    try:
+        await trips_coordinator.async_config_entry_first_refresh()
+    except Exception as err:  # noqa: BLE001
+        # Trips are secondary; a failure here shouldn't block entry setup.
+        _LOGGER.warning("Initial trips refresh failed, continuing: %s", err)
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         CONF_API: cowboy_api,
         CONF_BIKE_COORDINATOR: bike_coordinator,
         CONF_RELEASE_COORDINATOR: release_coordinator,
+        CONF_TRIPS_COORDINATOR: trips_coordinator,
     }
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))

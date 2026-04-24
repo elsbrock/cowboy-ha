@@ -82,6 +82,45 @@ class CowboyReleaseUpdateCoordinator(CowboyUpdateCoordinator):
             ) from http_err
 
 
+class CowboyTripsUpdateCoordinator(CowboyUpdateCoordinator):
+    """Cowboy coordinator to fetch trip data."""
+
+    async def _async_update_data(self) -> dict:
+        """Fetch recent trips and today highlight in a single pass."""
+        try:
+            async with asyncio.timeout(30):
+                recent = await self.hass.async_add_executor_job(
+                    self.cowboy_api.get_trips_recent
+                )
+                highlights = await self.hass.async_add_executor_job(
+                    self.cowboy_api.get_trips_highlights
+                )
+                _LOGGER.debug(
+                    "trip data fetched: recent=%s highlights=%s", recent, highlights
+                )
+
+                trips = (recent or {}).get("trips") or []
+                last_trip = trips[0] if trips else None
+
+                today_distance = None
+                for entry in highlights or []:
+                    if entry.get("type") == "today_highlight":
+                        payload = entry.get("payload") or {}
+                        today_distance = payload.get("distance")
+                        break
+
+                return {
+                    "last_trip": last_trip,
+                    "today_distance": today_distance,
+                }
+        except HTTPError as http_err:
+            if http_err.response.status_code == 401:
+                raise UpdateFailed("Unable to fetch data from Cowboy API") from http_err
+            raise UpdateFailed(
+                f"Error communicating with API: {http_err}"
+            ) from http_err
+
+
 class CowboyBikeCoordinatedEntity(CoordinatorEntity[CowboyBikeUpdateCoordinator]):
     """Defines a base Cowboy entity."""
 
