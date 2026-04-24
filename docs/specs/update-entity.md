@@ -134,9 +134,9 @@ pattern). Cover:
 ## Implementation checklist
 
 - [x] Write spec
-- [ ] Add `update.py` with `CowboyFirmwareUpdate`
-- [ ] Register `Platform.UPDATE` in `__init__.py`
-- [ ] Add translation keys
-- [ ] Disable `binary_sensor.update_available` by default
-- [ ] Defensive fix for the legacy binary sensor's `None` handling
-- [ ] `pytest` and `ruff check` pass
+- [x] Add `update.py` with `CowboyFirmwareUpdate`
+- [x] Register `Platform.UPDATE` in `__init__.py`
+- [x] Add translation keys
+- [x] Disable `binary_sensor.update_available` by default
+- [x] Defensive fix for the legacy binary sensor's `None` handling
+- [x] `pytest` and `ruff check` pass
