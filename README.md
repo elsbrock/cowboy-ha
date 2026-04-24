@@ -34,6 +34,10 @@ Enter your Cowboy account credentials in the integration setup:
 
 The account password is stored by the integration in order to be able to renew the session. It is not used for other purposes. Uninstalling the integration will logout the session.
 
+### Multiple bikes
+
+Cowboy requires [one account per bike](https://help.cowboy.com/en/articles/7967265-my-account), so multi-bike households end up with a separate login for each bike. The integration supports this by being added once per Cowboy account: run the setup flow again with the credentials of the second account to register another bike. Each bike then shows up as its own device with its own entities.
+
 > [!NOTE]
 > The integration polls the Cowboy bike for data updates every minute and checks for software release availability every hour.
 
