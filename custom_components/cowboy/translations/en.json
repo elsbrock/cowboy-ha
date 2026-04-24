@@ -82,6 +82,11 @@
             "displayed_speed": {
                 "name": "Speed limit"
             }
+        },
+        "update": {
+            "firmware": {
+                "name": "Firmware"
+            }
         }
     }
 }

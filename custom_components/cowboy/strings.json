@@ -82,6 +82,11 @@
       "battery_inserted": {
           "name": "Battery"
       }
+    },
+    "update": {
+      "firmware": {
+        "name": "Firmware"
+      }
     }
   }
 }
