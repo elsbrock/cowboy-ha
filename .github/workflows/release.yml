@@ -48,7 +48,7 @@ jobs:
       # For security updates, create a focused release
       - name: "Create Security Release"
         if: github.event_name == 'pull_request'
-        uses: release-drafter/release-drafter@v6
+        uses: release-drafter/release-drafter@v7
         with:
           version: ${{ steps.version.outputs.version }}
           name: "🔒 Security Release ${{ steps.version.outputs.version }}"
@@ -65,7 +65,7 @@ jobs:
       # Remove the security update from the existing draft release
       - name: "Update Draft Release"
         if: github.event_name == 'pull_request'
-        uses: release-drafter/release-drafter@v6
+        uses: release-drafter/release-drafter@v7
         with:
           version: next
           publish: false
