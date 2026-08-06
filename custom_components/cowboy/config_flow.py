@@ -46,11 +46,14 @@ class CowboyHub:
             self.bike_id = bike["id"]
             self.name = bike["nickname"] or bike["model"]["name"]
         except HTTPError as http_err:
-            if http_err.response.status_code == 401:
-                raise InvalidAuth
+            response = http_err.response
+            if response is not None and response.status_code == 401:
+                raise InvalidAuth from http_err
+            _LOGGER.error("HTTP error while authenticating: %s", http_err)
+            raise CannotConnect from http_err
         except Exception as err:
             _LOGGER.error("Unexpected error: %s", err)
-            raise CannotConnect
+            raise CannotConnect from err
         return True
 
 
