@@ -1,0 +1,149 @@
+name: "Verify Release Asset"
+
+on:
+  # Primary check, running alongside the Release workflow
+  release:
+    types:
+      - "published"
+  # Backstop: catches releases where the check above never got a runner
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to verify (defaults to the latest release)"
+        required: false
+        type: "string"
+
+permissions: {}
+
+jobs:
+  verify:
+    name: "Verify Release Asset"
+    runs-on: "ubuntu-latest"
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v6.1.0"
+
+      - name: "Resolve target release"
+        id: "target"
+        shell: "bash"
+        env:
+          GH_TOKEN: "${{ github.token }}"
+          EVENT_TAG: "${{ github.event.release.tag_name }}"
+          INPUT_TAG: "${{ inputs.tag }}"
+        run: |
+          set -euo pipefail
+
+          # When HACS installs from source, a missing asset is harmless.
+          if [ "$(jq -r '.zip_release // false' hacs.json)" != "true" ]; then
+            echo "zip_release is not enabled, nothing to verify"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -n "$EVENT_TAG" ]; then
+            tag="$EVENT_TAG"
+          elif [ -n "$INPUT_TAG" ]; then
+            tag="$INPUT_TAG"
+          else
+            tag="$(gh release view --json tagName --jq '.tagName')"
+          fi
+
+          {
+            echo "skip=false"
+            echo "tag=${tag}"
+            echo "filename=$(jq -r '.filename' hacs.json)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: "Wait for the asset"
+        id: "check"
+        if: "steps.target.outputs.skip == 'false'"
+        shell: "bash"
+        env:
+          GH_TOKEN: "${{ github.token }}"
+          TAG: "${{ steps.target.outputs.tag }}"
+          FILENAME: "${{ steps.target.outputs.filename }}"
+        run: |
+          set -uo pipefail
+
+          # Release gives up after ~16 minutes when it cannot acquire a runner,
+          # so poll past that before calling the asset missing. Scheduled and
+          # manual runs inspect releases that are already published, so they
+          # only need one look.
+          if [ "${{ github.event_name }}" = "release" ]; then
+            attempts=25
+          else
+            attempts=1
+          fi
+
+          echo "Looking for ${FILENAME} on ${TAG}"
+
+          for i in $(seq 1 "$attempts"); do
+            state="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" 2>/dev/null \
+              | jq -r --arg f "$FILENAME" \
+                  'first(.assets[]? | select(.name == $f) | .state) // ""')"
+
+            if [ "$state" = "uploaded" ]; then
+              echo "found=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::${FILENAME} is attached to ${TAG}"
+              exit 0
+            fi
+
+            echo "attempt ${i}/${attempts}: not present yet (state='${state}')"
+            [ "$i" -lt "$attempts" ] && sleep 60
+          done
+
+          echo "found=false" >> "$GITHUB_OUTPUT"
+          echo "::error::${FILENAME} is missing from ${TAG}"
+
+      - name: "Open a tracking issue"
+        if: "steps.check.outputs.found == 'false'"
+        shell: "bash"
+        env:
+          GH_TOKEN: "${{ github.token }}"
+          TAG: "${{ steps.target.outputs.tag }}"
+          FILENAME: "${{ steps.target.outputs.filename }}"
+          RUN_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        run: |
+          set -euo pipefail
+
+          title="Release ${TAG} is missing the ${FILENAME} asset"
+
+          existing="$(gh issue list --state open --search "\"${title}\" in:title" \
+            --json number --jq 'first(.[].number) // empty')"
+          if [ -n "$existing" ]; then
+            echo "Already tracked by #${existing}"
+            exit 0
+          fi
+
+          cat > /tmp/issue-body.md <<EOF
+          \`hacs.json\` sets \`zip_release: true\`, so HACS downloads \`${FILENAME}\` from
+          the release instead of the source tree. That asset is not attached to
+          [\`${TAG}\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}), so
+          every HACS install and update of this version fails with a 404.
+
+          To fix, find the \`Release\` run for \`${TAG}\` and re-run it:
+
+          \`\`\`
+          gh run list --workflow=release.yml
+          gh run rerun <run-id> --failed
+          \`\`\`
+
+          Re-running replays the release event and rebuilds the zip from the tag, so no
+          new tag or release is needed. The asset can take a minute or two to become
+          downloadable after upload.
+
+          Detected by [this run](${RUN_URL}).
+          EOF
+
+          gh issue create --title "$title" --body-file /tmp/issue-body.md
+
+      - name: "Fail if the asset is missing"
+        if: "steps.check.outputs.found == 'false'"
+        shell: "bash"
+        run: exit 1
