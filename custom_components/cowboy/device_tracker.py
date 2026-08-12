@@ -1,9 +1,6 @@
 """Cowboy device tracker."""
 
-from homeassistant.components.device_tracker.config_entry import (
-    SourceType,
-    TrackerEntity,
-)
+from homeassistant.components.device_tracker import SourceType, TrackerEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -66,11 +63,6 @@ class CowboyTracker(CowboyBikeCoordinatedEntity, TrackerEntity):
         Value in meters.
         """
         return self._attr_extra_state_attributes.get(ATTR_ACCURACY, None)
-
-    @property
-    def location_name(self) -> str | None:
-        """Return a location name for the current location of the device."""
-        return self._attr_extra_state_attributes.get(ATTR_LOC_NAME, None)
 
     @property
     def source_type(self) -> SourceType:
