@@ -58,6 +58,7 @@ def _configure_mock(mock_requests, bike_id=123, nickname="Test Bike"):
 
     get_response = mock_requests.get.return_value
     get_response.status_code = 200
+    get_response.headers = {}
     # GET /bikes/{id} returns the bike object directly (not wrapped in "data").
     get_response.json.return_value = bike_payload["data"]["bike"]
 
