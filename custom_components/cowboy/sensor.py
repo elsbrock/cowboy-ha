@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from math import isfinite
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -50,14 +51,71 @@ RIDE_MODE_OPTIONS = [
 ]
 
 
-def _parse_iso(value: str | None) -> datetime | None:
+def _parse_iso(value: Any) -> datetime | None:
     """ISO 8601 string → datetime, tolerant of missing/malformed values."""
-    if not value:
+    if not isinstance(value, str) or not value:
         return None
     try:
         return datetime.fromisoformat(value)
     except ValueError:
         return None
+
+
+def _as_float(value: Any) -> float | None:
+    """Return a finite number from Cowboy data, if possible."""
+    if isinstance(value, bool):
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    return result if isfinite(result) else None
+
+
+def _matching_full_battery_range(data: dict[str, Any]) -> float | None:
+    """Return the full range for the bike's last ride mode."""
+    ride_mode = data.get("last_ride_mode")
+    autonomies = data.get("autonomies")
+    if ride_mode is None or not isinstance(autonomies, list):
+        return None
+    for autonomy in autonomies:
+        if not isinstance(autonomy, dict):
+            continue
+        if autonomy.get("ride_mode") == ride_mode:
+            full_range = _as_float(autonomy.get("full_battery_range"))
+            if full_range is not None:
+                return full_range
+    return None
+
+
+def _remaining_range(data: dict[str, Any]) -> float | None:
+    """Calculate remaining range without assuming optional fields are present."""
+    charge = _as_float(data.get("battery_state_of_charge"))
+    full_range = _matching_full_battery_range(data)
+    if full_range is None:
+        full_range = _as_float(data.get("autonomy"))
+    if charge is None or full_range is None:
+        return None
+    return charge / 100 * full_range
+
+
+def _battery_health(data: dict[str, Any]) -> float | None:
+    """Calculate battery health when the API supplies a usable full range."""
+    current_range = _as_float(data.get("autonomy"))
+    full_range = _matching_full_battery_range(data)
+    if current_range is None or full_range is None or full_range <= 0:
+        return None
+    return current_range / full_range * 100
+
+
+def _nested_value(data: dict[str, Any], *keys: str) -> Any:
+    """Read a value from nested dictionaries, tolerating partial data."""
+    value: Any = data
+    for key in keys:
+        if not isinstance(value, dict):
+            return None
+        value = value.get(key)
+    return value
 
 
 @dataclass
@@ -114,12 +172,7 @@ SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.DISTANCE,
         suggested_display_precision=0,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda data: data['battery_state_of_charge'] / 100 * (
-            next(
-                (autonomy['full_battery_range'] for autonomy in data.get('autonomies', []) if autonomy['ride_mode'] == data.get('last_ride_mode')),
-                data.get('autonomy', 0)
-            )
-        ),
+        value_fn=_remaining_range,
     ),
     CowboySensorEntityDescription(
         key="battery_health",
@@ -128,10 +181,7 @@ SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         icon="mdi:battery-heart",
-        value_fn=lambda data: data['autonomy'] / next(
-            (autonomy['full_battery_range'] for autonomy in data['autonomies'] if autonomy['ride_mode'] == data['last_ride_mode']),
-            None
-        ) * 100
+        value_fn=_battery_health,
     ),
     CowboySensorEntityDescription(
         key="seen_at",
@@ -170,7 +220,7 @@ SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:lock-clock",
-        value_fn=lambda data: (data.get("pending_settings") or {}).get("auto_lock"),
+        value_fn=lambda data: _nested_value(data, "pending_settings", "auto_lock"),
     ),
     CowboySensorEntityDescription(
         key="displayed_speed",
@@ -179,9 +229,9 @@ SENSOR_TYPES: tuple[CowboySensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:speedometer",
-        value_fn=lambda data: (
-            ((data.get("sku") or {}).get("features") or {}).get("displayed_speeds") or {}
-        ).get("default"),
+        value_fn=lambda data: _nested_value(
+            data, "sku", "features", "displayed_speeds", "default"
+        ),
     ),
 )
 
@@ -292,19 +342,22 @@ class CowboySensor(CowboyBikeCoordinatedEntity, SensorEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{description.key}"
+        self._update_state()
+
+    def _update_state(self) -> None:
+        """Update state from the latest coordinator snapshot."""
+        coordinator_data = self.coordinator.data
+        data = coordinator_data if isinstance(coordinator_data, dict) else {}
+        if not self.entity_description.value_fn:
+            self._attr_native_value = data.get(self.entity_description.key)
+        else:
+            self._attr_native_value = self.entity_description.value_fn(data)
+        self._attr_extra_state_attributes = self.entity_description.attrs(data)
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        if not self.entity_description.value_fn:
-            self._attr_native_value = self.coordinator.data[self.entity_description.key]
-        else:
-            self._attr_native_value = self.entity_description.value_fn(
-                self.coordinator.data
-            )
-        self._attr_extra_state_attributes = self.entity_description.attrs(
-            self.coordinator.data
-        )
+        self._update_state()
         self.async_write_ha_state()
 
 
