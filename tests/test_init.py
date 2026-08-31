@@ -1,7 +1,8 @@
 """Tests for cowboy integration."""
 from datetime import timedelta
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import pytest
+from requests import ConnectionError, HTTPError, Response
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
@@ -31,6 +32,30 @@ MOCK_BIKE_RESPONSE = {
         }
     }
 }
+
+
+def _entry(hass: HomeAssistant, **kwargs) -> MockConfigEntry:
+    """Create a Cowboy config entry and register it with Home Assistant."""
+    entry = MockConfigEntry(
+        version=2,
+        minor_version=1,
+        domain=DOMAIN,
+        title="Test",
+        data=MOCK_CONFIG,
+        source="test",
+        options={},
+        unique_id="123",
+        **kwargs,
+    )
+    entry.add_to_hass(hass)
+    return entry
+
+
+def _http_error(status: int) -> HTTPError:
+    """Create an HTTP error with a real requests response."""
+    response = Response()
+    response.status_code = status
+    return HTTPError(f"{status} response", response=response)
 
 
 def _configure_mock(mock_requests, bike_id=123, nickname="Test Bike"):
@@ -109,32 +134,61 @@ async def test_setup_unload_and_reload_entry(hass: HomeAssistant):
 
 async def test_setup_entry_fails_on_auth_error(hass: HomeAssistant):
     """Test setup with authentication failure."""
-    with patch('custom_components.cowboy._client.requests') as mock_requests:
-        mock_requests.post.side_effect = Exception("Auth failed")
+    entry = _entry(hass)
 
-        entry = MockConfigEntry(
-            version=2,
-            minor_version=1,
-            domain=DOMAIN,
-            title="Test",
-            data=MOCK_CONFIG,
-            source="test",
-            options={},
-            unique_id="123",
-        )
-
-        entry.add_to_hass(hass)
-
+    client = MagicMock()
+    client.login.side_effect = _http_error(401)
+    with patch("custom_components.cowboy.CowboyAPIClient", return_value=client):
         assert not await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
-        device_registry = dr.async_get(hass)
-        devices = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
-        for device in devices:
-            device_registry.async_remove_device(device.id)
+    assert entry.state is config_entries.ConfigEntryState.SETUP_ERROR
+    assert DOMAIN not in hass.data
 
-        await hass.config_entries.async_remove(entry.entry_id)
-        assert DOMAIN not in hass.data
+
+async def test_setup_entry_retries_connection_errors(hass: HomeAssistant):
+    """Test setup retries transient API failures."""
+    entry = _entry(hass)
+
+    client = MagicMock()
+    client.login.side_effect = ConnectionError("offline")
+    with patch("custom_components.cowboy.CowboyAPIClient", return_value=client):
+        assert not await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert entry.state is config_entries.ConfigEntryState.SETUP_RETRY
+    assert DOMAIN not in hass.data
+
+
+async def test_setup_entry_retries_malformed_bike_response(hass: HomeAssistant):
+    """Test setup retries when the API returns incomplete bike data."""
+    entry = _entry(hass)
+
+    client = MagicMock()
+    client.get_bike.return_value = {"nickname": "Test"}
+    with patch("custom_components.cowboy.CowboyAPIClient", return_value=client):
+        assert not await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert entry.state is config_entries.ConfigEntryState.SETUP_RETRY
+    assert DOMAIN not in hass.data
+
+
+async def test_setup_entry_ignores_secondary_endpoint_failure(hass: HomeAssistant):
+    """Test a release API outage does not block core bike entities."""
+    entry = _entry(hass)
+
+    client = MagicMock()
+    client.get_bike.return_value = MOCK_BIKE_RESPONSE["data"]["bike"]
+    client.get_releases.side_effect = ConnectionError("offline")
+    client.get_trips_recent.return_value = {"trips": []}
+    client.get_trips_highlights.return_value = []
+    with patch("custom_components.cowboy.CowboyAPIClient", return_value=client):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+        assert entry.state is config_entries.ConfigEntryState.LOADED
+        assert await hass.config_entries.async_unload(entry.entry_id)
 
 async def test_scan_interval_option_applied(hass: HomeAssistant):
     """scan_interval from entry options is wired into the bike coordinator."""
@@ -170,6 +224,21 @@ async def test_scan_interval_option_applied(hass: HomeAssistant):
             device_registry.async_remove_device(device.id)
 
         await hass.config_entries.async_remove(entry.entry_id)
+
+
+async def test_options_flow_schedules_reload(hass: HomeAssistant):
+    """Changing the polling interval should reload the config entry once."""
+    entry = _entry(hass)
+
+    with patch.object(hass.config_entries, "async_schedule_reload") as reload_entry:
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {CONF_SCAN_INTERVAL: 5}
+        )
+
+    assert result["type"] == "create_entry"
+    assert entry.options[CONF_SCAN_INTERVAL] == 5
+    reload_entry.assert_called_once_with(entry.entry_id)
 
 
 
@@ -213,6 +282,77 @@ async def test_config_flow_validation(hass: HomeAssistant):
 
         for entry in hass.config_entries.async_entries(DOMAIN):
             await hass.config_entries.async_remove(entry.entry_id)
+
+
+async def test_reauthentication_updates_credentials(hass: HomeAssistant):
+    """Test successful reauthentication updates the existing entry."""
+    entry = _entry(hass)
+
+    with patch("custom_components.cowboy._client.requests") as mock_requests:
+        _configure_mock(mock_requests)
+        login_payload = MOCK_BIKE_RESPONSE | {
+            "data": {
+                "bike": MOCK_BIKE_RESPONSE["data"]["bike"] | {"id": 456}
+            }
+        }
+        mock_requests.post.return_value.json.return_value = login_payload
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_REAUTH,
+                "entry_id": entry.entry_id,
+            },
+            data=entry.data,
+        )
+
+        assert result["type"] == "form"
+        assert result["step_id"] == "reauth_confirm"
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={
+                CONF_USERNAME: "new@example.com",
+                CONF_PASSWORD: "new_password",
+            },
+        )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_USERNAME] == "new@example.com"
+    assert entry.data[CONF_PASSWORD] == "new_password"
+    assert entry.data[CONF_BIKE_ID] == 123
+    # The reload triggered by a successful reauth issues further requests,
+    # so assert the pinned bike was fetched rather than that it was last.
+    assert any(
+        call.args[0].endswith("/bikes/123")
+        for call in mock_requests.get.call_args_list
+    )
+
+
+async def test_reauthentication_rejects_invalid_credentials(hass: HomeAssistant):
+    """Test invalid updated credentials keep the reauthentication form open."""
+    entry = _entry(hass)
+
+    with patch("custom_components.cowboy._client.requests") as mock_requests:
+        mock_requests.post.return_value.raise_for_status.side_effect = _http_error(401)
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_REAUTH,
+                "entry_id": entry.entry_id,
+            },
+            data=entry.data,
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={
+                CONF_USERNAME: "test@example.com",
+                CONF_PASSWORD: "wrong_password",
+            },
+        )
+
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "invalid_auth"}
 
 
 async def test_config_flow_aborts_on_duplicate_bike(hass: HomeAssistant):

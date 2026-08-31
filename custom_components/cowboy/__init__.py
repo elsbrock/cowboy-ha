@@ -4,9 +4,12 @@ from __future__ import annotations
 from datetime import timedelta
 import logging
 
-from homeassistant.config_entries import ConfigEntry
+from requests import HTTPError, RequestException
+
+from homeassistant.config_entries import ConfigEntry, ConfigEntryNotReady
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 
@@ -42,13 +45,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up cowboy from a config entry."""
     bike_id = entry.data[CONF_BIKE_ID]
     cowboy_api = CowboyAPIClient(bike_id=bike_id)
-    await hass.async_add_executor_job(
-        cowboy_api.login, entry.data["username"], entry.data["password"]
-    )
+    try:
+        await hass.async_add_executor_job(
+            cowboy_api.login, entry.data["username"], entry.data["password"]
+        )
 
-    # Fetch the pinned bike explicitly — the active bike in the login response
-    # may not be the one this entry tracks.
-    bike = await hass.async_add_executor_job(cowboy_api.get_bike)
+        # Fetch the pinned bike explicitly — the active bike in the login response
+        # may not be the one this entry tracks.
+        bike = await hass.async_add_executor_job(cowboy_api.get_bike)
+    except HTTPError as err:
+        response = err.response
+        if response is not None and response.status_code == 401:
+            raise ConfigEntryAuthFailed("Invalid Cowboy authentication") from err
+        raise ConfigEntryNotReady(
+            f"Error communicating with Cowboy API: {err}"
+        ) from err
+    except (RequestException, TimeoutError, TypeError, ValueError) as err:
+        raise ConfigEntryNotReady(
+            f"Error communicating with Cowboy API: {err}"
+        ) from err
+
+    if (
+        not isinstance(bike, dict)
+        or not isinstance(bike.get("model"), dict)
+        or not bike["model"].get("name")
+    ):
+        raise ConfigEntryNotReady("Unexpected response from Cowboy API")
 
     # Device identifier is keyed on bike_id so the registry entry survives
     # config-entry recreation and stays stable across reloads.
@@ -62,22 +84,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     scan_interval = entry.options.get(CONF_SCAN_INTERVAL, 1)
     bike_coordinator = CowboyBikeUpdateCoordinator(
-        hass, device, cowboy_api, update_interval=timedelta(minutes=scan_interval)
+        hass,
+        device,
+        cowboy_api,
+        entry,
+        update_interval=timedelta(minutes=scan_interval),
     )
     release_coordinator = CowboyReleaseUpdateCoordinator(
-        hass, device, cowboy_api, update_interval=timedelta(hours=1)
+        hass, device, cowboy_api, entry, update_interval=timedelta(hours=1)
     )
     trips_coordinator = CowboyTripsUpdateCoordinator(
-        hass, device, cowboy_api, update_interval=timedelta(minutes=15)
+        hass, device, cowboy_api, entry, update_interval=timedelta(minutes=15)
     )
 
     await bike_coordinator.async_config_entry_first_refresh()
-    await release_coordinator.async_config_entry_first_refresh()
-    try:
-        await trips_coordinator.async_config_entry_first_refresh()
-    except Exception as err:  # noqa: BLE001
-        # Trips are secondary; a failure here shouldn't block entry setup.
-        _LOGGER.warning("Initial trips refresh failed, continuing: %s", err)
+    for coordinator_name, coordinator in (
+        ("release", release_coordinator),
+        ("trips", trips_coordinator),
+    ):
+        try:
+            await coordinator.async_config_entry_first_refresh()
+        except ConfigEntryNotReady as err:
+            # Secondary endpoints shouldn't block the core bike entities.
+            _LOGGER.warning(
+                "Initial %s refresh failed, continuing: %s", coordinator_name, err
+            )
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
@@ -86,8 +117,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         CONF_RELEASE_COORDINATOR: release_coordinator,
         CONF_TRIPS_COORDINATOR: trips_coordinator,
     }
-
-    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -154,11 +183,6 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             pass
 
     return True
-
-
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload the entry when options change."""
-    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
