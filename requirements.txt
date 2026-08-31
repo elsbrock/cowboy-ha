@@ -1,10 +1,13 @@
-homeassistant>=2024.11.0
-pytest>=7.0
-pytest-cov
-pytest-homeassistant-custom-component>=0.13.91
-pytest-asyncio>=0.21.0
+# pytest-homeassistant-custom-component pins the whole test stack it needs —
+# Home Assistant itself, pytest and every pytest plugin — to exact versions.
+# Adding our own pins for those here only produces resolver conflicts, so this
+# single line is what selects the Home Assistant release we test against.
+# 0.13.357 tracks Home Assistant 2026.8.3 (the current stable); later releases
+# track 2026.9 betas.
+pytest-homeassistant-custom-component==0.13.357
+
 black
 pylint
 pre-commit
-ruff>=0.9.4
-colorlog>=6.9.0
+ruff==0.16.5
+colorlog==6.12.0

@@ -11,7 +11,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        pythonEnv = pkgs.python311.withPackages (ps: with ps; [
+        pythonEnv = pkgs.python314.withPackages (ps: with ps; [
           pip
           virtualenv
         ]);
@@ -28,7 +28,19 @@
           ];
 
           shellHook = ''
-            # Create virtual environment if it doesn't exist
+            # Nix puts the site-packages of every Python tool in buildInputs on
+            # PYTHONPATH. Those are built against a different interpreter than
+            # pythonEnv, and they shadow the venv's own packages -- pytest in
+            # particular ends up importing the wrong copy of itself. Drop it.
+            unset PYTHONPATH
+
+            # Recreate the virtual environment when it's missing or was built
+            # with a different interpreter (e.g. after bumping pythonEnv).
+            pyver="$(python -c 'import sys; print("%d.%d" % sys.version_info[:2])')"
+            if [ -d .venv ] && [ ! -d ".venv/lib/python$pyver" ]; then
+              echo "Virtual environment targets a different Python, recreating..."
+              rm -rf .venv
+            fi
             if [ ! -d .venv ]; then
               echo "Creating virtual environment..."
               python -m venv .venv
