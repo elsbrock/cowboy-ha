@@ -1,9 +1,9 @@
 """Tests for cowboy diagnostics."""
 from unittest.mock import MagicMock
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.cowboy.const import (
     CONF_API,
@@ -44,7 +44,7 @@ RELEASE_FIXTURE = {
 
 async def test_diagnostics_redacts_sensitive_fields(hass: HomeAssistant):
     """Credentials, identifiers, PII, and GPS coords are masked."""
-    entry = ConfigEntry(
+    entry = MockConfigEntry(
         version=2,
         minor_version=1,
         domain=DOMAIN,
@@ -57,7 +57,6 @@ async def test_diagnostics_redacts_sensitive_fields(hass: HomeAssistant):
         source="user",
         options={},
         unique_id="224846",
-        discovery_keys=set(),
     )
 
     bike_coordinator = MagicMock()
@@ -108,7 +107,7 @@ async def test_diagnostics_redacts_sensitive_fields(hass: HomeAssistant):
 
 async def test_diagnostics_handles_empty_coordinator_data(hass: HomeAssistant):
     """If a coordinator hasn't populated data yet, return empty dicts."""
-    entry = ConfigEntry(
+    entry = MockConfigEntry(
         version=2,
         minor_version=1,
         domain=DOMAIN,
@@ -121,7 +120,6 @@ async def test_diagnostics_handles_empty_coordinator_data(hass: HomeAssistant):
         source="user",
         options={},
         unique_id="1",
-        discovery_keys=set(),
     )
 
     bike_coordinator = MagicMock()

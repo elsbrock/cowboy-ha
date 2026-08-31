@@ -6,6 +6,7 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 from homeassistant.helpers import device_registry as dr, entity_registry as er
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.cowboy.const import (
     CONF_BIKE_COORDINATOR,
     CONF_BIKE_ID,
@@ -75,7 +76,7 @@ async def test_setup_unload_and_reload_entry(hass: HomeAssistant):
     with patch('custom_components.cowboy._client.requests') as mock_requests:
         _configure_mock(mock_requests)
 
-        entry = config_entries.ConfigEntry(
+        entry = MockConfigEntry(
             version=2,
             minor_version=1,
             domain=DOMAIN,
@@ -84,10 +85,9 @@ async def test_setup_unload_and_reload_entry(hass: HomeAssistant):
             source="test",
             options={},
             unique_id="123",
-            discovery_keys=set(),
         )
 
-        hass.config_entries._entries[entry.entry_id] = entry
+        entry.add_to_hass(hass)
 
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -103,7 +103,7 @@ async def test_setup_unload_and_reload_entry(hass: HomeAssistant):
         for device in devices:
             device_registry.async_remove_device(device.id)
 
-        hass.config_entries._entries.pop(entry.entry_id)
+        await hass.config_entries.async_remove(entry.entry_id)
         assert not hass.data.get(DOMAIN)
 
 
@@ -112,7 +112,7 @@ async def test_setup_entry_fails_on_auth_error(hass: HomeAssistant):
     with patch('custom_components.cowboy._client.requests') as mock_requests:
         mock_requests.post.side_effect = Exception("Auth failed")
 
-        entry = config_entries.ConfigEntry(
+        entry = MockConfigEntry(
             version=2,
             minor_version=1,
             domain=DOMAIN,
@@ -121,10 +121,9 @@ async def test_setup_entry_fails_on_auth_error(hass: HomeAssistant):
             source="test",
             options={},
             unique_id="123",
-            discovery_keys=set(),
         )
 
-        hass.config_entries._entries[entry.entry_id] = entry
+        entry.add_to_hass(hass)
 
         assert not await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -134,7 +133,7 @@ async def test_setup_entry_fails_on_auth_error(hass: HomeAssistant):
         for device in devices:
             device_registry.async_remove_device(device.id)
 
-        hass.config_entries._entries.pop(entry.entry_id)
+        await hass.config_entries.async_remove(entry.entry_id)
         assert DOMAIN not in hass.data
 
 async def test_scan_interval_option_applied(hass: HomeAssistant):
@@ -142,7 +141,7 @@ async def test_scan_interval_option_applied(hass: HomeAssistant):
     with patch('custom_components.cowboy._client.requests') as mock_requests:
         _configure_mock(mock_requests)
 
-        entry = config_entries.ConfigEntry(
+        entry = MockConfigEntry(
             version=2,
             minor_version=1,
             domain=DOMAIN,
@@ -151,10 +150,9 @@ async def test_scan_interval_option_applied(hass: HomeAssistant):
             source="test",
             options={CONF_SCAN_INTERVAL: 5},
             unique_id="123",
-            discovery_keys=set(),
         )
 
-        hass.config_entries._entries[entry.entry_id] = entry
+        entry.add_to_hass(hass)
 
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -171,7 +169,7 @@ async def test_scan_interval_option_applied(hass: HomeAssistant):
         ):
             device_registry.async_remove_device(device.id)
 
-        hass.config_entries._entries.pop(entry.entry_id)
+        await hass.config_entries.async_remove(entry.entry_id)
 
 
 
@@ -200,22 +198,21 @@ async def test_config_flow_validation(hass: HomeAssistant):
         assert result["data"][CONF_BIKE_ID] == 123
 
         created = next(
-            e for e in hass.config_entries._entries.values()
-            if e.domain == DOMAIN and e.unique_id == "123"
+            e for e in hass.config_entries.async_entries(DOMAIN)
+            if e.unique_id == "123"
         )
         assert created is not None
 
         device_registry = dr.async_get(hass)
-        for entry in hass.config_entries._entries.values():
-            if entry.domain == DOMAIN:
-                devices = dr.async_entries_for_config_entry(
-                    device_registry, entry.entry_id
-                )
-                for device in devices:
-                    device_registry.async_remove_device(device.id)
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            devices = dr.async_entries_for_config_entry(
+                device_registry, entry.entry_id
+            )
+            for device in devices:
+                device_registry.async_remove_device(device.id)
 
-        for entry in hass.config_entries._entries.copy():
-            await hass.config_entries.async_remove(entry)
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            await hass.config_entries.async_remove(entry.entry_id)
 
 
 async def test_config_flow_aborts_on_duplicate_bike(hass: HomeAssistant):
@@ -223,7 +220,7 @@ async def test_config_flow_aborts_on_duplicate_bike(hass: HomeAssistant):
     with patch('custom_components.cowboy._client.requests') as mock_requests:
         _configure_mock(mock_requests, bike_id=123, nickname="Bike A")
 
-        existing = config_entries.ConfigEntry(
+        existing = MockConfigEntry(
             version=2,
             minor_version=1,
             domain=DOMAIN,
@@ -232,9 +229,8 @@ async def test_config_flow_aborts_on_duplicate_bike(hass: HomeAssistant):
             source="user",
             options={},
             unique_id="123",
-            discovery_keys=set(),
         )
-        hass.config_entries._entries[existing.entry_id] = existing
+        existing.add_to_hass(hass)
 
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -250,7 +246,7 @@ async def test_config_flow_aborts_on_duplicate_bike(hass: HomeAssistant):
         assert result["type"] == "abort"
         assert result["reason"] == "already_configured"
 
-        hass.config_entries._entries.pop(existing.entry_id)
+        await hass.config_entries.async_remove(existing.entry_id)
 
 
 async def test_config_flow_allows_second_bike(hass: HomeAssistant):
@@ -258,7 +254,7 @@ async def test_config_flow_allows_second_bike(hass: HomeAssistant):
     with patch('custom_components.cowboy._client.requests') as mock_requests:
         _configure_mock(mock_requests, bike_id=123, nickname="Bike A")
 
-        first = config_entries.ConfigEntry(
+        first = MockConfigEntry(
             version=2,
             minor_version=1,
             domain=DOMAIN,
@@ -267,9 +263,8 @@ async def test_config_flow_allows_second_bike(hass: HomeAssistant):
             source="user",
             options={},
             unique_id="123",
-            discovery_keys=set(),
         )
-        hass.config_entries._entries[first.entry_id] = first
+        first.add_to_hass(hass)
 
         # Second Cowboy account → different bike in the login response.
         _configure_mock(mock_requests, bike_id=456, nickname="Bike B")
@@ -290,13 +285,12 @@ async def test_config_flow_allows_second_bike(hass: HomeAssistant):
         assert result["result"].unique_id == "456"
 
         # Unload everything cleanly so the coordinator timers don't linger.
-        for entry_id in list(hass.config_entries._entries):
-            entry = hass.config_entries._entries[entry_id]
+        for entry in hass.config_entries.async_entries(DOMAIN):
             if entry.state == config_entries.ConfigEntryState.LOADED:
-                await hass.config_entries.async_unload(entry_id)
+                await hass.config_entries.async_unload(entry.entry_id)
                 await hass.async_block_till_done()
-        for entry_id in list(hass.config_entries._entries):
-            await hass.config_entries.async_remove(entry_id)
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            await hass.config_entries.async_remove(entry.entry_id)
 
 
 async def test_migrate_v1_entry_captures_bike_id(hass: HomeAssistant):
@@ -304,7 +298,7 @@ async def test_migrate_v1_entry_captures_bike_id(hass: HomeAssistant):
     with patch('custom_components.cowboy._client.requests') as mock_requests:
         _configure_mock(mock_requests, bike_id=789)
 
-        v1_entry = config_entries.ConfigEntry(
+        v1_entry = MockConfigEntry(
             version=1,
             minor_version=1,
             domain=DOMAIN,
@@ -316,9 +310,8 @@ async def test_migrate_v1_entry_captures_bike_id(hass: HomeAssistant):
             source="user",
             options={},
             unique_id="Legacy",
-            discovery_keys=set(),
         )
-        hass.config_entries._entries[v1_entry.entry_id] = v1_entry
+        v1_entry.add_to_hass(hass)
 
         assert await hass.config_entries.async_setup(v1_entry.entry_id)
         await hass.async_block_till_done()
@@ -337,7 +330,7 @@ async def test_migrate_v1_entry_captures_bike_id(hass: HomeAssistant):
         for device in devices:
             device_registry.async_remove_device(device.id)
 
-        hass.config_entries._entries.pop(v1_entry.entry_id)
+        await hass.config_entries.async_remove(v1_entry.entry_id)
 
 
 async def test_migration_preserves_existing_entities_and_device(hass: HomeAssistant):
@@ -353,7 +346,7 @@ async def test_migration_preserves_existing_entities_and_device(hass: HomeAssist
     with patch('custom_components.cowboy._client.requests') as mock_requests:
         _configure_mock(mock_requests, bike_id=789, nickname="Legacy")
 
-        v1_entry = config_entries.ConfigEntry(
+        v1_entry = MockConfigEntry(
             version=1,
             minor_version=1,
             domain=DOMAIN,
@@ -365,9 +358,8 @@ async def test_migration_preserves_existing_entities_and_device(hass: HomeAssist
             source="user",
             options={},
             unique_id="Legacy",
-            discovery_keys=set(),
         )
-        hass.config_entries._entries[v1_entry.entry_id] = v1_entry
+        v1_entry.add_to_hass(hass)
 
         # Seed the registries as a v1 install would have them.
         device_registry = dr.async_get(hass)
@@ -408,4 +400,4 @@ async def test_migration_preserves_existing_entities_and_device(hass: HomeAssist
             device_registry, v1_entry.entry_id
         ):
             device_registry.async_remove_device(device.id)
-        hass.config_entries._entries.pop(v1_entry.entry_id)
+        await hass.config_entries.async_remove(v1_entry.entry_id)
