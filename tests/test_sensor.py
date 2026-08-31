@@ -1,9 +1,15 @@
 """Unit tests for sensor value functions."""
 from datetime import datetime
+from unittest.mock import MagicMock
 
 import pytest
 
-from custom_components.cowboy.sensor import SENSOR_TYPES, TRIPS_SENSOR_TYPES, _parse_iso
+from custom_components.cowboy.sensor import (
+    SENSOR_TYPES,
+    TRIPS_SENSOR_TYPES,
+    CowboySensor,
+    _parse_iso,
+)
 
 
 BIKE_DATA = {
@@ -28,6 +34,16 @@ BIKE_DATA = {
 def _value_fn(key):
     desc = next(d for d in SENSOR_TYPES if d.key == key)
     return desc.value_fn
+
+
+def _sensor(key: str, data: dict) -> tuple[CowboySensor, MagicMock]:
+    """Build a bike sensor backed by a mock coordinator."""
+    description = next(desc for desc in SENSOR_TYPES if desc.key == key)
+    coordinator = MagicMock()
+    coordinator.data = data
+    coordinator.config_entry.entry_id = "entry-1"
+    coordinator.device_info = {}
+    return CowboySensor(coordinator, description), coordinator
 
 
 def _trip_descriptions_by_key() -> dict:
@@ -98,6 +114,105 @@ def test_parse_iso_handles_none_and_bad_input():
     assert _parse_iso(None) is None
     assert _parse_iso("") is None
     assert _parse_iso("not-a-date") is None
+    assert _parse_iso(123) is None
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("total_distance", 7041),
+        ("total_duration", 2178000),
+        ("total_co2_saved", 1416351),
+        ("battery_state_of_charge", 49),
+        ("pcb_battery_state_of_charge", 86),
+    ],
+)
+def test_plain_sensor_uses_initial_data_and_clears_missing_values(key, value):
+    """Plain sensors should use the first refresh and not retain stale data."""
+    entity, coordinator = _sensor(key, {key: value})
+    assert entity.native_value == value
+
+    coordinator.data = {}
+    entity._update_state()
+    assert entity.native_value is None
+
+
+@pytest.mark.parametrize("data", [[1], "invalid"])
+def test_sensor_tolerates_malformed_coordinator_data(data):
+    """Malformed top-level coordinator data should render unknown."""
+    entity, coordinator = _sensor("total_distance", data)
+    assert entity.native_value is None
+
+    coordinator.data = {"total_distance": 42}
+    entity._update_state()
+    assert entity.native_value == 42
+
+
+def test_battery_calculations_use_matching_ride_mode():
+    """Battery calculations should use the matching full-battery range."""
+    assert _value_fn("remaining_range")(BIKE_DATA) == pytest.approx(21.567)
+    assert _value_fn("battery_health")(BIKE_DATA) == pytest.approx(51.1 / 51.35 * 100)
+
+
+def test_remaining_range_falls_back_to_top_level_autonomy():
+    """Remaining range should retain the existing top-level fallback."""
+    data = {"battery_state_of_charge": 50, "autonomy": 40}
+    assert _value_fn("remaining_range")(data) == 20
+
+
+def test_battery_calculations_skip_invalid_matching_autonomy():
+    """A later valid range should win over a malformed duplicate entry."""
+    data = BIKE_DATA | {
+        "autonomies": [
+            {"ride_mode": "static_eu", "full_battery_range": None},
+            {"ride_mode": "static_eu", "full_battery_range": 50},
+        ]
+    }
+    assert _value_fn("remaining_range")(data) == pytest.approx(21)
+    assert _value_fn("battery_health")(data) == pytest.approx(102.2)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {},
+        {"battery_state_of_charge": None},
+        {"battery_state_of_charge": 50, "autonomies": None},
+        {"battery_state_of_charge": 50, "autonomies": [None]},
+        {
+            "battery_state_of_charge": 50,
+            "last_ride_mode": "static_eu",
+            "autonomies": [{"ride_mode": "static_eu"}],
+        },
+    ],
+)
+def test_battery_calculations_tolerate_partial_data(data):
+    """Incomplete battery data should render unknown instead of raising."""
+    assert _value_fn("remaining_range")(data) is None
+    assert _value_fn("battery_health")(data) is None
+
+
+def test_battery_health_rejects_zero_full_range():
+    """A zero full range should not cause a division error."""
+    data = BIKE_DATA | {
+        "autonomies": [
+            {"ride_mode": "static_eu", "full_battery_range": 0},
+        ]
+    }
+    assert _value_fn("battery_health")(data) is None
+
+
+def test_nested_sensor_values_tolerate_malformed_data():
+    """Malformed optional nested objects should render unknown."""
+    assert _value_fn("auto_lock")({"pending_settings": "invalid"}) is None
+    assert _value_fn("displayed_speed")({"sku": {"features": "invalid"}}) is None
+
+
+def test_all_calculated_sensors_tolerate_empty_data():
+    """Every calculated bike sensor should tolerate an empty API payload."""
+    for description in SENSOR_TYPES:
+        if description.value_fn:
+            assert description.value_fn({}) is None, description.key
 
 
 def test_trip_value_functions_with_last_trip():

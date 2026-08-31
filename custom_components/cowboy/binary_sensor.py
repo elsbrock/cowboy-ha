@@ -84,26 +84,33 @@ class CowboyBinarySensor(CowboyBikeCoordinatedEntity, BinarySensorEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{description.key}"
+        self._update_state()
+
+    def _update_state(self) -> None:
+        """Update state from the latest coordinator snapshot."""
+        coordinator_data = self.coordinator.data
+        data = coordinator_data if isinstance(coordinator_data, dict) else {}
+        self._attr_is_on = data.get(self.entity_description.key)
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self._attr_is_on = self.coordinator.data[self.entity_description.key]
+        self._update_state()
         self.async_write_ha_state()
 
 
 class CowboyUpdateBinarySensor(CowboyBinarySensor):
     """Availability of an update for a Cowboy bike."""
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator.
+    def _update_state(self) -> None:
+        """Update firmware availability from the latest coordinator snapshot.
 
         This sensor is on if there is a firmware update available and
         the bike firmware is not the latest release. The firmware update
         must not have status: testing.
         """
-        data = self.coordinator.data or {}
+        coordinator_data = self.coordinator.data
+        data = coordinator_data if isinstance(coordinator_data, dict) else {}
         # The API returns `null` (not just missing) for some keys in
         # /releases (e.g. cockpit, wireless_charger). `firmware` itself
         # has been observed null too, and `dict.get(k, default)` only
@@ -119,5 +126,3 @@ class CowboyUpdateBinarySensor(CowboyBinarySensor):
         self._attr_is_on = (
             firmware_name != sw_version and firmware_status != "testing"
         )
-
-        self.async_write_ha_state()
