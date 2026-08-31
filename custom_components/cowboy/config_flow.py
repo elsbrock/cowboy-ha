@@ -33,18 +33,23 @@ class CowboyHub:
     name = None
     bike_id = None
 
-    def __init__(self) -> None:
+    def __init__(self, bike_id: int | None = None) -> None:
         """Initialize."""
         self.auth = None
+        self.bike_id = bike_id
 
     def authenticate(self, username: str, password: str) -> bool:
         """Test if we can authenticate with the host."""
         try:
-            self.cowboy_api = CowboyAPIClient()
+            self.cowboy_api = CowboyAPIClient(bike_id=self.bike_id)
             resp = self.cowboy_api.login(username, password)
-            bike = resp["data"]["bike"]
+            bike = (
+                self.cowboy_api.get_bike()
+                if self.bike_id is not None
+                else resp["data"]["bike"]
+            )
             self.bike_id = bike["id"]
-            self.name = bike["nickname"] or bike["model"]["name"]
+            self.name = bike.get("nickname") or bike["model"]["name"]
         except HTTPError as http_err:
             response = http_err.response
             if response is not None and response.status_code == 401:
@@ -57,12 +62,14 @@ class CowboyHub:
         return True
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(
+    hass: HomeAssistant, data: dict[str, Any], bike_id: int | None = None
+) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
-    hub = CowboyHub()
+    hub = CowboyHub(bike_id)
 
     result = await hass.async_add_executor_job(
         hub.authenticate, data[CONF_USERNAME], data[CONF_PASSWORD]
@@ -83,6 +90,47 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for cowboy."""
 
     VERSION = 2
+
+    async def async_step_reauth(self, entry_data: dict[str, Any]) -> FlowResult:
+        """Handle configuration by an expired authentication token."""
+        self._reauth_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Confirm updated Cowboy credentials."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                await validate_input(
+                    self.hass,
+                    user_input,
+                    self._reauth_entry.data[CONF_BIKE_ID],
+                )
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except InvalidAuth:
+                errors["base"] = "invalid_auth"
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown"
+            else:
+                return self.async_update_reload_and_abort(
+                    self._reauth_entry,
+                    data_updates={
+                        CONF_USERNAME: user_input[CONF_USERNAME],
+                        CONF_PASSWORD: user_input[CONF_PASSWORD],
+                    },
+                )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=STEP_USER_DATA_SCHEMA,
+            errors=errors,
+        )
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
