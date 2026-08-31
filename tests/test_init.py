@@ -333,18 +333,24 @@ async def test_reauthentication_updates_credentials(hass: HomeAssistant):
                 CONF_PASSWORD: "new_password",
             },
         )
+        # A successful reauth reloads the entry. Let that finish while the
+        # transport is still mocked, or it races with test teardown.
+        await hass.async_block_till_done()
 
-    assert result["type"] == "abort"
-    assert result["reason"] == "reauth_successful"
-    assert entry.data[CONF_USERNAME] == "new@example.com"
-    assert entry.data[CONF_PASSWORD] == "new_password"
-    assert entry.data[CONF_BIKE_ID] == 123
-    # The reload triggered by a successful reauth issues further requests,
-    # so assert the pinned bike was fetched rather than that it was last.
-    assert any(
-        call.args[0].endswith("/bikes/123")
-        for call in mock_requests.get.call_args_list
-    )
+        assert result["type"] == "abort"
+        assert result["reason"] == "reauth_successful"
+        assert entry.data[CONF_USERNAME] == "new@example.com"
+        assert entry.data[CONF_PASSWORD] == "new_password"
+        assert entry.data[CONF_BIKE_ID] == 123
+        # The reload issues further requests, so assert the pinned bike was
+        # fetched rather than that it was fetched last.
+        assert any(
+            call.args[0].endswith("/bikes/123")
+            for call in mock_requests.get.call_args_list
+        )
+
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
 
 
 async def test_reauthentication_rejects_invalid_credentials(hass: HomeAssistant):
