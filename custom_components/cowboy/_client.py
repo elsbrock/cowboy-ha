@@ -1,4 +1,5 @@
 import time
+from threading import RLock
 
 import requests
 
@@ -14,6 +15,7 @@ class CowboyAPIClient:
         self.uid = None
         self.client = None
         self.token_expires = None
+        self._request_lock = RLock()
 
         # When bike_id is provided, all per-bike endpoints use it regardless of
         # which bike happens to be active in the login response. When it's
@@ -21,42 +23,41 @@ class CowboyAPIClient:
         self.bike_id = bike_id
 
     def login(self, email, password):
-        self.email = email
-        self.password = password
-        url = f"{self.base_url}/auth/sign_in"
-        headers = {
-            "content-type": "application/json",
-            "X-Cowboy-App-Token": self.app_token,
-            "Client-Type": self.client_type,
-        }
-        payload = {"email": email, "password": password}
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        response.raise_for_status()
+        with self._request_lock:
+            self.email = email
+            self.password = password
+            url = f"{self.base_url}/auth/sign_in"
+            headers = {
+                "content-type": "application/json",
+                "X-Cowboy-App-Token": self.app_token,
+                "Client-Type": self.client_type,
+            }
+            payload = {"email": email, "password": password}
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            response.raise_for_status()
+            self._update_session(response)
 
-        self.access_token = response.headers.get("Access-Token")
-        self.uid = response.headers.get("Uid")
-        self.client = response.headers.get("Client")
-        self.token_expires = int(response.headers.get("Expiry"))
+            json_response = response.json()
 
-        json_response = response.json()
+            if self.bike_id is None:
+                self.bike_id = json_response["data"]["bike"]["id"]
 
-        if self.bike_id is None:
-            self.bike_id = json_response["data"]["bike"]["id"]
+            return json_response
 
-        return json_response
+    def _update_session(self, response):
+        """Update authentication details returned by the API."""
+        if access_token := response.headers.get("Access-Token"):
+            self.access_token = access_token
+        if uid := response.headers.get("Uid"):
+            self.uid = uid
+        if client := response.headers.get("Client"):
+            self.client = client
+        if expiry := response.headers.get("Expiry"):
+            self.token_expires = int(expiry)
 
-    def _is_token_expired(self):
-        current_time = int(time.time())
-        return current_time >= self.token_expires
-
-    def _renew_token(self):
-        self.login(self.email, self.password)
-
-    def logout(self):
-        if not self.access_token or not self.uid or not self.client:
-            raise ValueError("Not logged in")
-        url = f"{self.base_url}/auth/sign_out"
-        headers = {
+    def _auth_headers(self):
+        """Return authentication headers for an API request."""
+        return {
             "content-type": "application/json",
             "X-Cowboy-App-Token": self.app_token,
             "Access-Token": self.access_token,
@@ -64,9 +65,24 @@ class CowboyAPIClient:
             "Uid": self.uid,
             "Client": self.client,
         }
-        response = requests.delete(url, headers=headers, timeout=5)
-        response.raise_for_status()
-        return response.json()
+
+    def _is_token_expired(self):
+        if self.token_expires is None:
+            return False
+        current_time = int(time.time())
+        return current_time >= self.token_expires
+
+    def _renew_token(self):
+        self.login(self.email, self.password)
+
+    def logout(self):
+        with self._request_lock:
+            if not self.access_token or not self.uid or not self.client:
+                raise ValueError("Not logged in")
+            url = f"{self.base_url}/auth/sign_out"
+            response = requests.delete(url, headers=self._auth_headers(), timeout=5)
+            response.raise_for_status()
+            return response.json()
 
     def get_user_info(self):
         return self._get_endpoint("/users/me")
@@ -120,19 +136,23 @@ class CowboyAPIClient:
         return self._get_endpoint("/theft")
 
     def _get_endpoint(self, endpoint, timeout=30):
-        if not self.access_token or not self.uid or not self.client:
-            raise ValueError("Not logged in")
-        if self._is_token_expired():
-            self._renew_token()
-        url = f"{self.base_url}{endpoint}"
-        headers = {
-            "content-type": "application/json",
-            "X-Cowboy-App-Token": self.app_token,
-            "Access-Token": self.access_token,
-            "Client-Type": self.client_type,
-            "Uid": self.uid,
-            "Client": self.client,
-        }
-        response = requests.get(url, headers=headers, timeout=timeout)
-        response.raise_for_status()
-        return response.json()
+        with self._request_lock:
+            if not self.access_token or not self.uid or not self.client:
+                raise ValueError("Not logged in")
+            if self._is_token_expired():
+                self._renew_token()
+
+            url = f"{self.base_url}{endpoint}"
+            response = requests.get(
+                url, headers=self._auth_headers(), timeout=timeout
+            )
+
+            if response.status_code == 401:
+                self._renew_token()
+                response = requests.get(
+                    url, headers=self._auth_headers(), timeout=timeout
+                )
+
+            response.raise_for_status()
+            self._update_session(response)
+            return response.json()
