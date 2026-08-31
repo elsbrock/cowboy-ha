@@ -139,3 +139,44 @@ async def test_diagnostics_handles_empty_coordinator_data(hass: HomeAssistant):
     assert result["release"] == {}
 
     hass.data[DOMAIN].pop(entry.entry_id)
+
+
+async def test_diagnostics_redacts_the_stored_session(hass: HomeAssistant):
+    """The reusable session is token material and must not leak."""
+    entry = MockConfigEntry(
+        version=2,
+        minor_version=1,
+        domain=DOMAIN,
+        title="Manfred",
+        data={
+            CONF_USERNAME: "alice@example.com",
+            CONF_PASSWORD: "hunter2",
+            CONF_BIKE_ID: 224846,
+            "session": {
+                "access_token": "super-secret",
+                "uid": "alice@example.com",
+                "client": "client-id",
+                "token_expires": 1819643509,
+            },
+        },
+        source="user",
+        options={},
+        unique_id="224846",
+    )
+
+    bike_coordinator = MagicMock()
+    bike_coordinator.data = {}
+    release_coordinator = MagicMock()
+    release_coordinator.data = {}
+    hass.data[DOMAIN] = {
+        entry.entry_id: {
+            CONF_API: MagicMock(),
+            CONF_BIKE_COORDINATOR: bike_coordinator,
+            CONF_RELEASE_COORDINATOR: release_coordinator,
+        }
+    }
+
+    result = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert result["entry"]["data"]["session"] == REDACTED
+    assert "super-secret" not in str(result)

@@ -12,6 +12,7 @@ from custom_components.cowboy.const import (
     CONF_BIKE_COORDINATOR,
     CONF_BIKE_ID,
     CONF_SCAN_INTERVAL,
+    CONF_SESSION,
     DOMAIN,
 )
 
@@ -37,15 +38,17 @@ MOCK_BIKE_RESPONSE = {
 def _entry(hass: HomeAssistant, **kwargs) -> MockConfigEntry:
     """Create a Cowboy config entry and register it with Home Assistant."""
     entry = MockConfigEntry(
-        version=2,
-        minor_version=1,
-        domain=DOMAIN,
-        title="Test",
-        data=MOCK_CONFIG,
-        source="test",
-        options={},
-        unique_id="123",
-        **kwargs,
+        **{
+            "version": 2,
+            "minor_version": 1,
+            "domain": DOMAIN,
+            "title": "Test",
+            "data": MOCK_CONFIG,
+            "source": "test",
+            "options": {},
+            "unique_id": "123",
+            **kwargs,
+        }
     )
     entry.add_to_hass(hass)
     return entry
@@ -138,6 +141,7 @@ async def test_setup_entry_fails_on_auth_error(hass: HomeAssistant):
     entry = _entry(hass)
 
     client = MagicMock()
+    client.export_session.return_value = None
     client.login.side_effect = _http_error(401)
     with patch("custom_components.cowboy.CowboyAPIClient", return_value=client):
         assert not await hass.config_entries.async_setup(entry.entry_id)
@@ -152,6 +156,7 @@ async def test_setup_entry_retries_connection_errors(hass: HomeAssistant):
     entry = _entry(hass)
 
     client = MagicMock()
+    client.export_session.return_value = None
     client.login.side_effect = ConnectionError("offline")
     with patch("custom_components.cowboy.CowboyAPIClient", return_value=client):
         assert not await hass.config_entries.async_setup(entry.entry_id)
@@ -166,6 +171,7 @@ async def test_setup_entry_retries_malformed_bike_response(hass: HomeAssistant):
     entry = _entry(hass)
 
     client = MagicMock()
+    client.export_session.return_value = None
     client.get_bike.return_value = {"nickname": "Test"}
     with patch("custom_components.cowboy.CowboyAPIClient", return_value=client):
         assert not await hass.config_entries.async_setup(entry.entry_id)
@@ -180,6 +186,7 @@ async def test_setup_entry_ignores_secondary_endpoint_failure(hass: HomeAssistan
     entry = _entry(hass)
 
     client = MagicMock()
+    client.export_session.return_value = None
     client.get_bike.return_value = MOCK_BIKE_RESPONSE["data"]["bike"]
     client.get_releases.side_effect = ConnectionError("offline")
     client.get_trips_recent.return_value = {"trips": []}
@@ -566,3 +573,90 @@ async def test_migration_preserves_existing_entities_and_device(hass: HomeAssist
         ):
             device_registry.async_remove_device(device.id)
         await hass.config_entries.async_remove(v1_entry.entry_id)
+
+
+async def test_stored_session_is_reused_instead_of_signing_in(hass: HomeAssistant):
+    """A stored session should be restored, not exchanged for a fresh login.
+
+    Cowboy keeps only the last 10 sessions per account, so signing in on every
+    restart eventually evicts the user's phone app.
+    """
+    entry = _entry(
+        hass,
+        data=MOCK_CONFIG | {
+            CONF_SESSION: {
+                "access_token": "stored-token",
+                "uid": "test@example.com",
+                "client": "stored-client",
+                "token_expires": 9999999999,
+            }
+        },
+    )
+
+    with patch("custom_components.cowboy._client.requests") as mock_requests:
+        _configure_mock(mock_requests)
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+        mock_requests.post.assert_not_called()
+        sent = mock_requests.get.call_args_list[0].kwargs["headers"]
+        assert sent["Access-Token"] == "stored-token"
+        assert sent["Client"] == "stored-client"
+
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
+
+
+async def test_session_is_stored_after_first_login(hass: HomeAssistant):
+    """The session from the initial sign-in is persisted for the next start."""
+    entry = _entry(hass)
+
+    with patch("custom_components.cowboy._client.requests") as mock_requests:
+        _configure_mock(mock_requests)
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+        assert entry.data[CONF_SESSION] == {
+            "access_token": "test-token",
+            "uid": "test@example.com",
+            "client": "test-client",
+            "token_expires": 9999999999,
+        }
+
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
+
+
+async def test_unload_does_not_sign_out(hass: HomeAssistant):
+    """Restarting must keep the session alive; only removal signs out."""
+    entry = _entry(hass)
+
+    with patch("custom_components.cowboy._client.requests") as mock_requests:
+        _configure_mock(mock_requests)
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
+
+        mock_requests.delete.assert_not_called()
+
+
+async def test_removal_signs_out(hass: HomeAssistant):
+    """Removing the integration should invalidate the session upstream."""
+    entry = _entry(hass)
+
+    with patch("custom_components.cowboy._client.requests") as mock_requests:
+        _configure_mock(mock_requests)
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+        await hass.config_entries.async_remove(entry.entry_id)
+        await hass.async_block_till_done()
+
+        mock_requests.delete.assert_called_once()
+        assert mock_requests.delete.call_args.args[0].endswith("/auth/sign_out")

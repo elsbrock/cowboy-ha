@@ -16,6 +16,11 @@ class CowboyAPIClient:
         self.client = None
         self.token_expires = None
         self._request_lock = RLock()
+        # Snapshot of the fields above, rebound as a whole whenever they
+        # change so export_session() can read it without taking the lock --
+        # a request may hold the lock for the full 30s timeout, and this is
+        # read from the event loop.
+        self._session = None
 
         # When bike_id is provided, all per-bike endpoints use it regardless of
         # which bike happens to be active in the login response. When it's
@@ -54,6 +59,42 @@ class CowboyAPIClient:
             self.client = client
         if expiry := response.headers.get("Expiry"):
             self.token_expires = int(expiry)
+        self._snapshot_session()
+
+    def _snapshot_session(self):
+        """Rebind the exportable session snapshot."""
+        if not self.access_token or not self.uid or not self.client:
+            self._session = None
+            return
+        self._session = {
+            "access_token": self.access_token,
+            "uid": self.uid,
+            "client": self.client,
+            "token_expires": self.token_expires,
+        }
+
+    def export_session(self):
+        """Return the current session, or None when not signed in.
+
+        Safe to call from the event loop: it reads a single attribute that is
+        rebound as a whole, so it never blocks on the request lock.
+        """
+        return self._session
+
+    def restore_session(self, email, password, session):
+        """Reuse a stored session instead of signing in again.
+
+        Credentials are still needed: the client falls back to signing in when
+        the session turns out to be expired or rejected.
+        """
+        with self._request_lock:
+            self.email = email
+            self.password = password
+            self.access_token = session.get("access_token")
+            self.uid = session.get("uid")
+            self.client = session.get("client")
+            self.token_expires = session.get("token_expires")
+            self._snapshot_session()
 
     def _auth_headers(self):
         """Return authentication headers for an API request."""

@@ -32,7 +32,11 @@ Enter your Cowboy account credentials in the integration setup:
 - **Username**: The email address associated with your Cowboy account.
 - **Password**: Your Cowboy account password.
 
-The account password is stored by the integration in order to be able to renew the session. It is not used for other purposes. Uninstalling the integration will logout the session.
+The account password is stored by the integration in order to be able to renew the session. It is not used for other purposes.
+
+The session itself is stored too and reused across Home Assistant restarts. Cowboy keeps only the [last 10 sessions per account](https://help.cowboy.com/en/articles/7967265-my-account), so signing in on every restart used to slowly push your phone out of that list and log you out of the Cowboy app. A session stays valid for about a year; the integration signs in again by itself if it ever expires or is rejected, and asks you for your credentials if that fails too.
+
+Removing the integration logs the session out. Restarting Home Assistant does not.
 
 ### Multiple bikes
 

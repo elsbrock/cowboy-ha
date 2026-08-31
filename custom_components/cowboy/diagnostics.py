@@ -17,6 +17,7 @@ TO_REDACT = {
     # credentials / session
     "username",
     "password",
+    "session",
     "email",
     "uid",
     "client",

@@ -8,7 +8,7 @@ from requests import HTTPError, RequestException
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryNotReady
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -18,8 +18,10 @@ from .const import (
     CONF_API,
     CONF_BIKE_COORDINATOR,
     CONF_BIKE_ID,
+    CONF_OPTIONS_SNAPSHOT,
     CONF_RELEASE_COORDINATOR,
     CONF_SCAN_INTERVAL,
+    CONF_SESSION,
     CONF_TRIPS_COORDINATOR,
     DOMAIN,
     MANUFACTURER,
@@ -45,10 +47,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up cowboy from a config entry."""
     bike_id = entry.data[CONF_BIKE_ID]
     cowboy_api = CowboyAPIClient(bike_id=bike_id)
+    username = entry.data["username"]
+    password = entry.data["password"]
+    stored_session = entry.data.get(CONF_SESSION)
     try:
-        await hass.async_add_executor_job(
-            cowboy_api.login, entry.data["username"], entry.data["password"]
-        )
+        if stored_session:
+            # Reuse the session from the previous run. Cowboy keeps only the
+            # last 10 sessions per account, so signing in on every restart
+            # eventually evicts the user's phone app. The client falls back to
+            # signing in by itself if this session is expired or rejected.
+            await hass.async_add_executor_job(
+                cowboy_api.restore_session, username, password, stored_session
+            )
+        else:
+            await hass.async_add_executor_job(cowboy_api.login, username, password)
 
         # Fetch the pinned bike explicitly — the active bike in the login response
         # may not be the one this entry tracks.
@@ -116,7 +128,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         CONF_BIKE_COORDINATOR: bike_coordinator,
         CONF_RELEASE_COORDINATOR: release_coordinator,
         CONF_TRIPS_COORDINATOR: trips_coordinator,
+        CONF_OPTIONS_SNAPSHOT: dict(entry.options),
     }
+
+    @callback
+    def _async_persist_session() -> None:
+        """Store the current session so the next start can reuse it."""
+        session = cowboy_api.export_session()
+        if session is None or session == entry.data.get(CONF_SESSION):
+            return
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, CONF_SESSION: session}
+        )
+
+    _async_persist_session()
+    entry.async_on_unload(bike_coordinator.async_add_listener(_async_persist_session))
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
@@ -188,21 +214,42 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload the entry when options change."""
+    """Reload the entry when its options change.
+
+    Storing a rotated session also updates the entry. Reloading for that would
+    tear down the coordinators every time Cowboy hands back a new token, so
+    only an actual options change is worth a reload.
+    """
+    runtime = hass.data[DOMAIN].get(entry.entry_id)
+    if runtime is None:
+        return
+    if runtime[CONF_OPTIONS_SNAPSHOT] == dict(entry.options):
+        return
+    runtime[CONF_OPTIONS_SNAPSHOT] = dict(entry.options)
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Invalidate the Cowboy session when the integration is removed.
+
+    This deliberately does not happen on unload: Home Assistant unloads entries
+    on every restart, and signing out there is what made each start consume a
+    fresh session slot.
+    """
+    session = entry.data.get(CONF_SESSION)
+    if not session:
+        return
+    client = CowboyAPIClient(bike_id=entry.data.get(CONF_BIKE_ID))
+    client.restore_session(entry.data["username"], entry.data["password"], session)
+    try:
+        await hass.async_add_executor_job(client.logout)
+    except Exception as err:  # noqa: BLE001
+        # Best-effort: the token may already be invalid, which is fine.
+        _LOGGER.debug("Cowboy sign-out on removal failed: %s", err)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    try:  # noqa: SIM105
-        # Best-effort: invalidate the session on Cowboy's side. May 401 if
-        # the token already expired, which is fine.
-        await hass.async_add_executor_job(
-            hass.data[DOMAIN][entry.entry_id][CONF_API].logout
-        )
-    except:  # noqa: E722
-        # ignore any errors
-        pass
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
 
