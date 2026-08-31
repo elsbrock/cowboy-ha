@@ -226,19 +226,37 @@ async def test_scan_interval_option_applied(hass: HomeAssistant):
         await hass.config_entries.async_remove(entry.entry_id)
 
 
-async def test_options_flow_schedules_reload(hass: HomeAssistant):
-    """Changing the polling interval should reload the config entry once."""
-    entry = _entry(hass)
+async def test_options_flow_reloads_with_new_interval(hass: HomeAssistant):
+    """Changing the polling interval should reload and take effect.
 
-    with patch.object(hass.config_entries, "async_schedule_reload") as reload_entry:
+    Asserting only that a reload was requested is not enough: the options are
+    written by the options flow manager *after* async_step_init returns, so a
+    reload triggered from inside that step runs against the old options and the
+    new interval is silently ignored.
+    """
+    with patch("custom_components.cowboy._client.requests") as mock_requests:
+        _configure_mock(mock_requests)
+        entry = _entry(hass)
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        coordinator = hass.data[DOMAIN][entry.entry_id][CONF_BIKE_COORDINATOR]
+        assert coordinator.update_interval == timedelta(minutes=1)
+
         result = await hass.config_entries.options.async_init(entry.entry_id)
         result = await hass.config_entries.options.async_configure(
             result["flow_id"], {CONF_SCAN_INTERVAL: 5}
         )
+        await hass.async_block_till_done()
 
-    assert result["type"] == "create_entry"
-    assert entry.options[CONF_SCAN_INTERVAL] == 5
-    reload_entry.assert_called_once_with(entry.entry_id)
+        assert result["type"] == "create_entry"
+        assert entry.options[CONF_SCAN_INTERVAL] == 5
+
+        reloaded = hass.data[DOMAIN][entry.entry_id][CONF_BIKE_COORDINATOR]
+        assert reloaded.update_interval == timedelta(minutes=5)
+
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
 
 
 

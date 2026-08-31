@@ -173,9 +173,7 @@ class CowboyOptionsFlow(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
-            result = self.async_create_entry(title="", data=user_input)
-            self.hass.config_entries.async_schedule_reload(self.config_entry.entry_id)
-            return result
+            return self.async_create_entry(title="", data=user_input)
 
         current = self.config_entry.options.get(CONF_SCAN_INTERVAL, 1)
         schema = vol.Schema(
