@@ -426,7 +426,7 @@ footer{border-top:1px solid var(--line);padding:3rem 0 4rem;background:var(--ink
       <div class="step">
         <b>STEP 02</b>
         <h3>Sign in</h3>
-        <p>Settings &rarr; Devices &amp; services &rarr; <em>Add integration</em> &rarr; Cowboy. Enter the email and password of your Cowboy account.</p>
+        <p>Settings &rarr; Devices &amp; services &rarr; <em>Add integration</em> &rarr; Cowboy. The first field is labelled <em>Username</em> &mdash; it wants the email address your Cowboy account uses.</p>
         <p>The bike shows up as its own device with every entity attached. Nothing else to configure.</p>
       </div>
       <div class="step">
@@ -474,7 +474,8 @@ actions:
       </div>
       <div class="note">
         <h3>Polling, not pushing</h3>
-        <p>Bike data is polled every minute by default, adjustable from <code>1</code> to <code>60</code> minutes in the integration options. Firmware releases are checked hourly.</p>
+        <p>Bike data is polled every minute by default, adjustable from <code>1</code> to <code>60</code> minutes under <em>Configure</em> on the integration card.</p>
+        <p>Trip data is on its own fixed 15-minute cycle and firmware releases are checked hourly &mdash; neither follows that setting, so <em>Distance today</em> can lag the battery reading by a quarter of an hour.</p>
         <p>Firmware is reported, not flashed — the <code>update</code> entity tells you what's available; installing still happens in the Cowboy app.</p>
       </div>
     </div>

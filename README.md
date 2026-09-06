@@ -6,6 +6,8 @@ This custom Home Assistant integration connects Home Assistant with your [Cowboy
   <img width="640" alt="image" src="https://github.com/user-attachments/assets/0d2358c7-2448-48e1-bf67-4cd07ec34474">
 </p>
 
+Full documentation, including the complete entity list: **[cowboy.iodev.org](https://cowboy.iodev.org/)**
+
 Feedback and contributions welcome.
 
 ## Features
