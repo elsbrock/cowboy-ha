@@ -82,6 +82,13 @@ This project uses [Nix](https://nixos.org/) to manage development environments. 
 
 The test suite can be run using pytest: `pytest tests/ -v`
 
+## Related projects
+
+- [glance-cowboy](https://github.com/nichtlegacy/glance-cowboy) by nichtlegacy — a
+  [Glance](https://github.com/glanceapp/glance) `custom-api` widget that renders these
+  entities as a dashboard card: battery bar, mileage, time driven, and optional status
+  rows for security, crash and firmware.
+
 ## Disclaimer
 
 This integration is an independent project and not officially affiliated with Cowboy. "Cowboy" is a trademark and belongs to its respective owners. This project does not claim any official endorsement by Cowboy. Use at your own risk.
@@ -96,7 +103,7 @@ Parts of the repository were copied over from [ludeeus/integration_blueprint](ht
 
 ## Documentation
 
-For more information, please visit [our GitHub Pages site](https://elsbrock.github.io/cowboy-ha/).
+For more information, please visit [cowboy.iodev.org](https://cowboy.iodev.org/).
 
 ---
 
