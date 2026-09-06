@@ -301,7 +301,7 @@ footer{border-top:1px solid var(--line);padding:3rem 0 4rem;background:var(--ink
     </div>
 
     <div class="cluster rise d3" aria-label="Example readout">
-      <div class="cluster-hd"><b>Manfred</b><span>cowboy · polling 60s</span></div>
+      <div class="cluster-hd"><b>Otto</b><span>cowboy · polling 60s</span></div>
       <div class="readout">
         <div class="cell">
           <div class="k">Battery</div>
@@ -440,12 +440,12 @@ footer{border-top:1px solid var(--line);padding:3rem 0 4rem;background:var(--ink
     <pre class="wide-code"><span class="c"># Tell me before the bike is flat</span>
 triggers:
   - trigger: numeric_state
-    entity_id: sensor.manfred_remaining_battery
+    entity_id: sensor.otto_remaining_battery
     below: 20
 actions:
   - action: notify.mobile_app_phone
     data:
-      message: "Charge the bike — {{ states('sensor.manfred_remaining_range') }} km left"</pre>
+      message: "Charge the bike — {{ states('sensor.otto_remaining_range') }} km left"</pre>
   </div>
 </section>
 
