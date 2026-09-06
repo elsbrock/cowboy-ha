@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cowboy-ha — Cowboy e-bike in Home Assistant</title>
+<meta name="description" content="A Home Assistant integration for Cowboy e-bikes. Battery, range, mileage, trips, crash and theft state, GPS and firmware — as native entities. MIT, installable from the default HACS catalog.">
+<link rel="canonical" href="https://cowboy.iodev.org/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://cowboy.iodev.org/">
+<meta property="og:title" content="cowboy-ha — Cowboy e-bike in Home Assistant">
+<meta property="og:description" content="Battery, range, mileage, trips, crash and theft state, GPS and firmware — as native Home Assistant entities.">
+<meta property="og:image" content="https://cowboy.iodev.org/assets/screenshot.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b0c0a">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0b0c0a; --ink2:#101208; --surface:#15180f; --surface2:#1b1f14;
+  --line:#282d1e; --line2:#39412a;
+  --fg:#eaeee0; --dim:#9aa287; --dimmer:#6d7460;
+  --acc:#d8f651; --acc-ink:#12160a;
+  --safe:#7fd6a2; --warn:#f0a84a;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --sans:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  --disp:"Bricolage Grotesque","IBM Plex Sans",-apple-system,sans-serif;
+  --pad:clamp(1.25rem,5vw,4.5rem);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--ink);color:var(--fg);font-family:var(--sans);
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+/* ---- atmosphere: survey grid + grain ---- */
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 88px,
+    linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/88px 100%,
+    radial-gradient(120% 80% at 78% -10%,rgba(216,246,81,.10),transparent 60%);
+  opacity:.5;
+  mask-image:radial-gradient(130% 100% at 50% 0,#000 30%,transparent 92%);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.16;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+main,header,footer{position:relative;z-index:2}
+a{color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:var(--pad)}
+
+/* ---- nav ---- */
+.nav{
+  position:sticky;top:0;z-index:30;backdrop-filter:blur(14px);
+  background:rgba(11,12,10,.72);border-bottom:1px solid var(--line);
+}
+.nav .wrap{display:flex;align-items:center;gap:1.5rem;height:58px}
+.mark{font-family:var(--mono);font-weight:600;letter-spacing:-.02em;font-size:.95rem;text-decoration:none;display:flex;align-items:center;gap:.55rem}
+.mark b{color:var(--acc);font-weight:600}
+.mark svg{width:19px;height:19px;color:var(--acc)}
+.nav nav{margin-left:auto;display:flex;gap:1.6rem;font-family:var(--mono);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase}
+.nav nav a{color:var(--dim);text-decoration:none;transition:color .18s}
+.nav nav a:hover{color:var(--acc)}
+@media(max-width:720px){.nav nav a:not(.keep){display:none}}
+
+/* ---- hero ---- */
+.hero{padding:clamp(3.5rem,9vw,7rem) 0 clamp(3rem,6vw,5rem)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:clamp(2rem,5vw,4.5rem);align-items:center}
+@media(max-width:940px){.hero .wrap{grid-template-columns:1fr}}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:.6rem;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);
+  border:1px solid var(--line2);border-radius:999px;padding:.34rem .8rem;
+  background:rgba(216,246,81,.05);
+}
+.eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--acc);animation:blink 2.6s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+h1{
+  font-family:var(--disp);font-weight:800;font-variation-settings:"wdth" 88;
+  font-size:clamp(2.6rem,6.6vw,4.7rem);line-height:.95;letter-spacing:-.035em;
+  margin:1.4rem 0 0;text-wrap:balance;
+}
+h1 em{font-style:normal;color:var(--acc);position:relative;white-space:nowrap}
+h1 em::after{content:"";position:absolute;left:0;right:0;bottom:.08em;height:3px;background:var(--acc);opacity:.28}
+.lede{font-size:1.115rem;color:var(--dim);max-width:36rem;margin:1.5rem 0 0}
+.lede strong{color:var(--fg);font-weight:500}
+.cta{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:2.1rem}
+.btn{
+  display:inline-flex;align-items:center;gap:.6rem;text-decoration:none;
+  font-family:var(--mono);font-size:.85rem;font-weight:500;letter-spacing:.01em;
+  padding:.78rem 1.25rem;border-radius:2px;border:1px solid var(--line2);
+  transition:transform .16s cubic-bezier(.2,.9,.3,1),background .18s,border-color .18s,color .18s;
+}
+.btn svg{width:15px;height:15px}
+.btn-1{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
+.btn-1:hover{transform:translateY(-2px);box-shadow:0 8px 26px -10px rgba(216,246,81,.65)}
+.btn-2{color:var(--fg)}
+.btn-2:hover{border-color:var(--acc);color:var(--acc);transform:translateY(-2px)}
+.facts{display:flex;flex-wrap:wrap;gap:.4rem 1.5rem;margin-top:1.9rem;font-family:var(--mono);font-size:.75rem;color:var(--dimmer);letter-spacing:.04em}
+.facts span::before{content:"— ";color:var(--line2)}
+
+/* ---- instrument cluster ---- */
+.cluster{
+  border:1px solid var(--line2);background:
+    linear-gradient(155deg,var(--surface2),var(--ink2) 70%);
+  border-radius:3px;padding:1.6rem 1.6rem 1.35rem;position:relative;overflow:hidden;
+  box-shadow:0 30px 70px -40px #000, inset 0 1px 0 rgba(255,255,255,.045);
+}
+.cluster::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,transparent 0 46%,rgba(216,246,81,.06) 50%,transparent 54% 100%);
+  background-size:100% 210px;animation:scan 7s linear infinite;
+}
+@keyframes scan{to{background-position:0 210px}}
+.cluster-hd{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dimmer);border-bottom:1px solid var(--line);padding-bottom:.85rem}
+.cluster-hd b{color:var(--dim);font-weight:500}
+.readout{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);margin-top:1px}
+.cell{background:var(--ink2);padding:1.15rem 0 .95rem}
+.cell:nth-child(1),.cell:nth-child(3){padding-right:1rem}
+.cell:nth-child(1),.cell:nth-child(2){padding-top:1.4rem}
+.cell.wide{grid-column:1/-1;display:flex;align-items:baseline;justify-content:space-between;gap:1rem}
+.k{font-family:var(--mono);font-size:.66rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dimmer)}
+.v{font-family:var(--disp);font-weight:700;font-variation-settings:"wdth" 82;font-size:clamp(2.1rem,5.2vw,2.9rem);line-height:1;letter-spacing:-.03em;margin-top:.5rem;display:flex;align-items:baseline;gap:.22rem}
+.v u{text-decoration:none;font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--dim);letter-spacing:0}
+.v.lime{color:var(--acc)}
+.bar{height:5px;background:var(--line);margin-top:.85rem;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);width:0;animation:fill 1.6s .5s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes fill{to{width:var(--w)}}
+.route{display:block;width:100%;height:74px;margin-top:.4rem}
+.route path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.route .bg{stroke:var(--line2);stroke-width:1.5}
+.route .fg{stroke:var(--acc);stroke-width:2;stroke-dasharray:520;stroke-dashoffset:520;animation:draw 3.4s .7s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.pins{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.66rem;color:var(--dimmer);letter-spacing:.1em;text-transform:uppercase;margin-top:-.2rem}
+
+/* ---- sections ---- */
+section{padding:clamp(3.2rem,7vw,6rem) 0;border-top:1px solid var(--line)}
+.sec-hd{display:flex;align-items:baseline;gap:1.1rem;margin-bottom:2.4rem;flex-wrap:wrap}
+.sec-no{font-family:var(--mono);font-size:.74rem;color:var(--acc);letter-spacing:.16em}
+h2{font-family:var(--disp);font-weight:700;font-variation-settings:"wdth" 88;font-size:clamp(1.65rem,3.6vw,2.4rem);letter-spacing:-.03em;line-height:1.05;margin:0}
+.sec-hd p{color:var(--dim);margin:0;font-size:.95rem;max-width:34rem;flex:1 1 18rem}
+
+/* ---- spec sheet ---- */
+.sheet{border:1px solid var(--line);background:var(--surface)}
+.grp{border-bottom:1px solid var(--line)}
+.grp:last-child{border-bottom:0}
+.grp-hd{display:flex;align-items:center;gap:.8rem;padding:.85rem 1.15rem;background:var(--ink2);border-bottom:1px solid var(--line)}
+.grp-hd code{font-family:var(--mono);font-size:.76rem;color:var(--acc);letter-spacing:.02em}
+.grp-hd span{font-family:var(--mono);font-size:.68rem;color:var(--dimmer);letter-spacing:.1em;text-transform:uppercase;margin-left:auto}
+.row{
+  display:grid;grid-template-columns:minmax(0,15rem) minmax(0,1fr) auto;
+  gap:1rem;align-items:center;padding:.62rem 1.15rem;
+  border-bottom:1px solid rgba(40,45,30,.5);transition:background .15s;
+}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--surface2)}
+.row .nm{font-size:.92rem;font-weight:500}
+.row .ky{font-family:var(--mono);font-size:.78rem;color:var(--dim);overflow:hidden;text-overflow:ellipsis}
+.tag{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;color:var(--dim);border:1px solid var(--line2);padding:.14rem .45rem;border-radius:2px;white-space:nowrap}
+.tag.off{color:var(--dimmer);border-style:dashed}
+@media(max-width:640px){
+  .row{grid-template-columns:minmax(0,1fr) auto;gap:.15rem 1rem}
+  .row .nm{grid-column:1;grid-row:1}
+  .row .ky{grid-column:1;grid-row:2;font-size:.72rem}
+  .row .tag{grid-column:2;grid-row:1/3;justify-self:end;align-self:center}
+}
+
+/* ---- shot ---- */
+.shot{border:1px solid var(--line2);background:var(--ink2);padding:.55rem;border-radius:3px;box-shadow:0 40px 90px -50px #000}
+.shot-bar{display:flex;align-items:center;gap:.42rem;padding:.35rem .5rem .6rem}
+.shot-bar i{width:8px;height:8px;border-radius:50%;background:var(--line2)}
+.shot-bar span{margin-left:.6rem;font-family:var(--mono);font-size:.7rem;color:var(--dimmer)}
+.shot img{display:block;width:100%;height:auto;border-radius:2px;border:1px solid var(--line)}
+.cap{font-family:var(--mono);font-size:.73rem;color:var(--dimmer);margin-top:.9rem;text-align:center}
+
+/* ---- steps ---- */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.step{background:var(--surface);padding:1.5rem 1.4rem}
+.step b{font-family:var(--mono);font-size:.72rem;color:var(--acc);letter-spacing:.14em;display:block;margin-bottom:.85rem}
+.step h3{font-family:var(--disp);font-weight:700;font-size:1.05rem;letter-spacing:-.015em;margin:0 0 .5rem}
+.step p{margin:0;color:var(--dim);font-size:.9rem}
+.step p + p{margin-top:.7rem}
+.step code{font-family:var(--mono);font-size:.84em;color:var(--fg);background:var(--ink2);padding:.1rem .3rem;border:1px solid var(--line)}
+.step a{color:var(--acc);text-decoration:none;border-bottom:1px solid rgba(216,246,81,.3)}
+.step a:hover{border-bottom-color:var(--acc)}
+pre{
+  margin:.9rem 0 0;background:var(--ink);border:1px solid var(--line);
+  padding:.75rem .85rem;overflow-x:auto;font-family:var(--mono);font-size:.76rem;
+  color:var(--dim);line-height:1.65;border-radius:2px;
+}
+pre .c{color:var(--dimmer)}
+.wide-code{margin-top:1.15rem;padding:1.25rem 1.35rem;font-size:.82rem;background:var(--ink2)}
+@media(max-width:560px){.wide-code{font-size:.72rem}}
+
+/* ---- notes ---- */
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,25rem),1fr));gap:1.15rem}
+.note{border:1px solid var(--line);background:var(--surface);padding:1.4rem 1.35rem;border-left:2px solid var(--line2);transition:border-left-color .2s}
+.note:hover{border-left-color:var(--acc)}
+.note h3{font-family:var(--disp);font-weight:700;font-size:1rem;margin:0 0 .6rem;letter-spacing:-.01em}
+.note p{margin:0;color:var(--dim);font-size:.9rem}
+.note p + p{margin-top:.6rem}
+.note code{font-family:var(--mono);font-size:.82em;color:var(--fg);background:var(--ink2);padding:.1rem .3rem;border:1px solid var(--line)}
+.note a{color:var(--acc);text-decoration:none;border-bottom:1px solid rgba(216,246,81,.3)}
+
+/* ---- related ---- */
+.rel{
+  position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+  gap:1.35rem;align-items:center;
+  border:1px solid var(--line);background:var(--surface);padding:1.5rem 1.5rem;
+  transition:border-color .2s,background .2s,transform .2s cubic-bezier(.2,.9,.3,1);
+}
+.rel:hover,.rel:focus-within{border-color:var(--line2);background:var(--surface2);transform:translateY(-2px)}
+/* The title link stretches over the whole card; the inline link stays above it. */
+.rel-link{color:inherit;text-decoration:none}
+.rel-link::after{content:"";position:absolute;inset:0}
+.rel-txt p a{position:relative;z-index:1}
+.rel-ico{width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--line2);color:var(--acc);background:rgba(216,246,81,.05)}
+.rel-ico svg{width:21px;height:21px}
+.rel-txt h3{font-family:var(--disp);font-weight:700;font-size:1.05rem;margin:0 0 .35rem;letter-spacing:-.015em}
+.rel-txt h3 span{font-family:var(--mono);font-size:.72rem;font-weight:400;color:var(--dimmer);letter-spacing:.04em;margin-left:.5rem}
+.rel-txt p{margin:0;color:var(--dim);font-size:.9rem}
+.rel-txt code{font-family:var(--mono);font-size:.85em;color:var(--fg)}
+.rel-txt a{color:var(--dim);text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:3px}
+.rel-go{color:var(--dimmer);transition:color .2s,transform .2s}
+.rel-go svg{width:20px;height:20px;display:block}
+.rel:hover .rel-go,.rel:focus-within .rel-go{color:var(--acc);transform:translate(2px,-2px)}
+@media(max-width:640px){.rel{grid-template-columns:auto minmax(0,1fr);gap:1rem}.rel-go{display:none}}
+
+/* ---- footer ---- */
+footer{border-top:1px solid var(--line);padding:3rem 0 4rem;background:var(--ink2)}
+.foot{display:flex;flex-wrap:wrap;gap:2rem;justify-content:space-between;align-items:flex-start}
+.foot-links{display:flex;flex-wrap:wrap;gap:1.4rem;font-family:var(--mono);font-size:.8rem}
+.foot-links a{color:var(--dim);text-decoration:none;transition:color .18s}
+.foot-links a:hover{color:var(--acc)}
+.disc{max-width:44rem;margin-top:2.2rem;padding-top:1.5rem;border-top:1px solid var(--line);font-size:.8rem;color:var(--dimmer);line-height:1.65}
+
+/* ---- entrance ---- */
+.rise{opacity:0;transform:translateY(18px);animation:rise .85s cubic-bezier(.2,.8,.2,1) forwards}
+.d1{animation-delay:.05s}.d2{animation-delay:.14s}.d3{animation-delay:.23s}
+.d4{animation-delay:.32s}.d5{animation-delay:.41s}.d6{animation-delay:.5s}
+@keyframes rise{to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .rise{opacity:1;transform:none}
+  .bar i{width:var(--w)}
+  .route .fg{stroke-dashoffset:0}
+}
+::selection{background:var(--acc);color:var(--acc-ink)}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="mark" href="#top">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/><path d="M12 17.5 8.5 10l6-2.5 3.5 4"/><path d="M5.5 17.5 9 9"/></svg>
+      cowboy<b>-ha</b>
+    </a>
+    <nav>
+      <a href="#entities">Entities</a>
+      <a href="#install">Install</a>
+      <a href="#notes">Notes</a>
+      <a class="keep" href="https://github.com/elsbrock/cowboy-ha">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<div class="hero">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow rise d1"><i></i>Home Assistant · custom integration</span>
+      <h1 class="rise d2">Everything your&nbsp;bike knows, <em>on the dashboard</em>.</h1>
+      <p class="lede rise d3">
+        <strong>cowboy-ha</strong> pulls your Cowboy e-bike into Home Assistant as a real device —
+        battery, range, mileage, trips, crash and theft state, GPS position and firmware,
+        all as native entities you can chart, template and automate against.
+      </p>
+      <div class="cta rise d4">
+        <a class="btn btn-1" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=elsbrock&amp;repository=cowboy-ha&amp;category=integration">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13"/><path d="m7 11 5 5 5-5"/><path d="M4 21h16"/></svg>
+          Open in HACS
+        </a>
+        <a class="btn btn-2" href="https://github.com/elsbrock/cowboy-ha">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.5 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.69 5.4-5.25 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5"/></svg>
+          Source
+        </a>
+      </div>
+      <div class="facts rise d5">
+        <span>MIT licensed</span>
+        <span>In the default HACS catalog</span>
+        <span>Home Assistant 2024.12+</span>
+        <span>No cloud besides Cowboy's</span>
+      </div>
+    </div>
+
+    <div class="cluster rise d3" aria-label="Example readout">
+      <div class="cluster-hd"><b>Manfred</b><span>cowboy · polling 60s</span></div>
+      <div class="readout">
+        <div class="cell">
+          <div class="k">Battery</div>
+          <div class="v lime"><span data-count="72">0</span><u>%</u></div>
+          <div class="bar"><i style="--w:72%"></i></div>
+        </div>
+        <div class="cell">
+          <div class="k">Range left</div>
+          <div class="v"><span data-count="48">0</span><u>km</u></div>
+          <div class="bar"><i style="--w:48%"></i></div>
+        </div>
+        <div class="cell">
+          <div class="k">Mileage</div>
+          <div class="v"><span data-count="1374">0</span><u>km</u></div>
+        </div>
+        <div class="cell">
+          <div class="k">CO₂ saved</div>
+          <div class="v"><span data-count="46">0</span><u>kg</u></div>
+        </div>
+        <div class="cell wide">
+          <div style="flex:1">
+            <div class="k">Last trip · device_tracker</div>
+            <svg class="route" viewBox="0 0 400 74" preserveAspectRatio="none" aria-hidden="true">
+              <path class="bg" d="M6 58 C 60 62, 76 20, 128 26 S 208 66, 252 44 S 330 8, 394 18"/>
+              <path class="fg" d="M6 58 C 60 62, 76 20, 128 26 S 208 66, 252 44 S 330 8, 394 18"/>
+            </svg>
+            <div class="pins"><span>Home</span><span>12.4 km · 34 min</span><span>Home</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section id="entities">
+  <div class="wrap">
+    <div class="sec-hd">
+      <span class="sec-no">01</span>
+      <h2>The spec sheet</h2>
+      <p>One device per bike, grouped the way Home Assistant groups it. Names follow your HA language; the keys below are what you'll find in the source.</p>
+    </div>
+
+    <div class="sheet">
+      <div class="grp">
+        <div class="grp-hd"><code>sensor</code><span>Ride &amp; battery</span></div>
+        <div class="row"><span class="nm">Remaining battery</span><span class="ky">battery_state_of_charge</span><span class="tag">% · battery</span></div>
+        <div class="row"><span class="nm">Remaining range</span><span class="ky">remaining_range</span><span class="tag">km · distance</span></div>
+        <div class="row"><span class="nm">Battery health</span><span class="ky">battery_health</span><span class="tag">%</span></div>
+        <div class="row"><span class="nm">Mileage</span><span class="ky">total_distance</span><span class="tag">km · total</span></div>
+        <div class="row"><span class="nm">Time driven</span><span class="ky">total_duration</span><span class="tag">duration</span></div>
+        <div class="row"><span class="nm">Saved CO₂</span><span class="ky">total_co2_saved</span><span class="tag">g</span></div>
+        <div class="row"><span class="nm">Last seen</span><span class="ky">seen_at</span><span class="tag">timestamp</span></div>
+        <div class="row"><span class="nm">Last ride mode</span><span class="ky">last_ride_mode</span><span class="tag">enum</span></div>
+        <div class="row"><span class="nm">Auto-lock</span><span class="ky">auto_lock</span><span class="tag">min · duration</span></div>
+        <div class="row"><span class="nm">Remaining battery (internal PCB)</span><span class="ky">pcb_battery_state_of_charge</span><span class="tag off">hidden by default</span></div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-hd"><code>sensor</code><span>Trips</span></div>
+        <div class="row"><span class="nm">Distance today</span><span class="ky">today_distance</span><span class="tag">km · total</span></div>
+        <div class="row"><span class="nm">Last trip distance</span><span class="ky">last_trip_distance</span><span class="tag">km</span></div>
+        <div class="row"><span class="nm">Last trip duration</span><span class="ky">last_trip_duration</span><span class="tag">duration</span></div>
+        <div class="row"><span class="nm">Last trip ended</span><span class="ky">last_trip_ended_at</span><span class="tag">timestamp</span></div>
+        <div class="row"><span class="nm">Last trip CO₂ saved</span><span class="ky">last_trip_co2_saved</span><span class="tag">g</span></div>
+        <div class="row"><span class="nm">Last trip calories</span><span class="ky">last_trip_calories</span><span class="tag">kcal · energy</span></div>
+        <div class="row"><span class="nm">Last trip title</span><span class="ky">last_trip_title</span><span class="tag">text</span></div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-hd"><code>binary_sensor</code><span>State</span></div>
+        <div class="row"><span class="nm">Stolen</span><span class="ky">stolen</span><span class="tag">safety</span></div>
+        <div class="row"><span class="nm">Crashed</span><span class="ky">crashed</span><span class="tag">safety</span></div>
+        <div class="row"><span class="nm">Battery docked</span><span class="ky">battery_inserted</span><span class="tag">plug</span></div>
+        <div class="row"><span class="nm">Update available</span><span class="ky">update_available</span><span class="tag off">superseded · disabled</span></div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-hd"><code>device_tracker</code> <code>update</code><span>Position &amp; firmware</span></div>
+        <div class="row"><span class="nm">Bike location</span><span class="ky">GPS source, with accuracy</span><span class="tag">device_tracker</span></div>
+        <div class="row"><span class="nm">Firmware</span><span class="ky">installed vs. deployed release, with notes</span><span class="tag">update</span></div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-hd"><code>sensor</code><span>Diagnostic</span></div>
+        <div class="row"><span class="nm">Last crash</span><span class="ky">last_crash_started_at</span><span class="tag">timestamp</span></div>
+        <div class="row"><span class="nm">Warranty ends</span><span class="ky">warranty_ends_at</span><span class="tag">timestamp</span></div>
+        <div class="row"><span class="nm">Speed limit</span><span class="ky">displayed_speed</span><span class="tag">km/h · speed</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="screenshot">
+  <div class="wrap">
+    <div class="sec-hd">
+      <span class="sec-no">02</span>
+      <h2>In Home Assistant</h2>
+      <p>A normal device page — no custom cards required. Everything is a standard entity, so the logbook, history, statistics and voice assistants pick it up for free.</p>
+    </div>
+    <div class="shot">
+      <div class="shot-bar"><i></i><i></i><i></i><span>Settings › Devices &amp; services › Cowboy</span></div>
+      <img src="assets/screenshot.png" alt="The Cowboy device page in Home Assistant, showing device info, a sensor list with battery, mileage, battery health and range, a diagnostic device tracker, and a logbook of recent state changes." loading="lazy" width="1600" height="1243">
+    </div>
+    <p class="cap">Device page from a live install. Entity names follow the Home Assistant language setting.</p>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <div class="sec-hd">
+      <span class="sec-no">03</span>
+      <h2>Install</h2>
+      <p>Three minutes, no YAML. The integration ships in the default HACS catalog, so there's no custom repository to add.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <b>STEP 01</b>
+        <h3>Add it from HACS</h3>
+        <p>In <a href="https://hacs.xyz/">HACS</a> &rarr; Integrations, search for <em>Cowboy</em> and download it. Then restart Home Assistant.</p>
+        <p>Rather do it by hand? Copy <code>custom_components/cowboy</code> into your config directory &mdash; the <a href="https://github.com/elsbrock/cowboy-ha#installation-via-hacs">README</a> has the commands.</p>
+      </div>
+      <div class="step">
+        <b>STEP 02</b>
+        <h3>Sign in</h3>
+        <p>Settings &rarr; Devices &amp; services &rarr; <em>Add integration</em> &rarr; Cowboy. Enter the email and password of your Cowboy account.</p>
+        <p>The bike shows up as its own device with every entity attached. Nothing else to configure.</p>
+      </div>
+      <div class="step">
+        <b>STEP 03</b>
+        <h3>Automate</h3>
+        <p>Everything is a plain entity, so ordinary triggers, templates and history graphs work &mdash; no special handling anywhere.</p>
+        <p>For example, a nudge when the battery runs low:</p>
+      </div>
+    </div>
+
+    <pre class="wide-code"><span class="c"># Tell me before the bike is flat</span>
+triggers:
+  - trigger: numeric_state
+    entity_id: sensor.manfred_remaining_battery
+    below: 20
+actions:
+  - action: notify.mobile_app_phone
+    data:
+      message: "Charge the bike — {{ states('sensor.manfred_remaining_range') }} km left"</pre>
+  </div>
+</section>
+
+<section id="notes">
+  <div class="wrap">
+    <div class="sec-hd">
+      <span class="sec-no">04</span>
+      <h2>Worth knowing</h2>
+      <p>The honest small print — how credentials are handled, what happens with more than one bike, and how often it talks to Cowboy.</p>
+    </div>
+    <div class="notes">
+      <div class="note">
+        <h3>Your session survives restarts</h3>
+        <p>Cowboy keeps only the <a href="https://help.cowboy.com/en/articles/7967265-my-account">last 10 sessions per account</a>. Signing in on every Home Assistant restart used to push your phone out of that list and log you out of the app, so the session is stored and reused instead.</p>
+        <p>It stays valid for about a year. If it expires or is rejected, the integration signs in again by itself and only asks you for credentials if that fails too.</p>
+      </div>
+      <div class="note">
+        <h3>Where the password lives</h3>
+        <p>The password is kept in the config entry so the session can be renewed without you. It isn't used for anything else, and nothing is sent anywhere except Cowboy's own API.</p>
+        <p>Removing the integration logs the session out. Restarting Home Assistant does not.</p>
+      </div>
+      <div class="note">
+        <h3>More than one bike</h3>
+        <p>Cowboy requires one account per bike, so households with two bikes have two logins. Add the integration a second time with the other account's credentials — each bike becomes its own device with its own entities.</p>
+      </div>
+      <div class="note">
+        <h3>Polling, not pushing</h3>
+        <p>Bike data is polled every minute by default, adjustable from <code>1</code> to <code>60</code> minutes in the integration options. Firmware releases are checked hourly.</p>
+        <p>Firmware is reported, not flashed — the <code>update</code> entity tells you what's available; installing still happens in the Cowboy app.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section id="ecosystem">
+  <div class="wrap">
+    <div class="sec-hd">
+      <span class="sec-no">05</span>
+      <h2>Built on top</h2>
+      <p>Once the entities exist, anything that speaks to Home Assistant can use them. Things other people have made:</p>
+    </div>
+    <div class="rel">
+      <div class="rel-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="12" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="19" width="7" height="2" rx="1"/></svg>
+      </div>
+      <div class="rel-txt">
+        <h3><a class="rel-link" href="https://github.com/nichtlegacy/glance-cowboy">glance-cowboy</a> <span>by nichtlegacy</span></h3>
+        <p>A drop-in <code>custom-api</code> widget for <a href="https://github.com/glanceapp/glance">Glance</a> that renders these entities as a dashboard card &mdash; battery bar, mileage, time driven, and optional status rows for security, crash and firmware.</p>
+      </div>
+      <span class="rel-go" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg>
+      </span>
+    </div>
+    <p class="cap" style="text-align:left;margin-top:1.1rem">Made something? <a href="https://github.com/elsbrock/cowboy-ha/issues" style="color:var(--acc);text-decoration:none">Open an issue</a> and it can go here.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <a class="mark" href="#top">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/><path d="M12 17.5 8.5 10l6-2.5 3.5 4"/><path d="M5.5 17.5 9 9"/></svg>
+        cowboy<b>-ha</b>
+      </a>
+      <div class="foot-links">
+        <a href="https://github.com/elsbrock/cowboy-ha">Repository</a>
+        <a href="https://github.com/elsbrock/cowboy-ha/issues">Issues</a>
+        <a href="https://github.com/elsbrock/cowboy-ha/releases">Releases</a>
+        <a href="https://github.com/elsbrock/cowboy-ha/blob/main/LICENSE">MIT</a>
+        <a href="https://iodev.org">iodev.org</a>
+      </div>
+    </div>
+    <p class="disc">
+      An independent project, built and maintained by enthusiasts. Not affiliated with, endorsed by, or supported by Cowboy —
+      “Cowboy” is a trademark of its respective owner. It talks to the same API the Cowboy app uses and can break whenever that changes. Use at your own risk.
+    </p>
+  </div>
+</footer>
+
+<script>
+// Count the hero readouts up once, on load. Purely decorative.
+(function () {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll('[data-count]').forEach(function (el) {
+      el.textContent = el.dataset.count;
+    });
+    return;
+  }
+  document.querySelectorAll('[data-count]').forEach(function (el, i) {
+    var target = parseInt(el.dataset.count, 10), start = null, dur = 1400, delay = 400 + i * 110;
+    setTimeout(function () {
+      requestAnimationFrame(function step(ts) {
+        if (start === null) start = ts;
+        var p = Math.min((ts - start) / dur, 1);
+        el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+        if (p < 1) requestAnimationFrame(step);
+      });
+    }, delay);
+  });
+})();
+</script>
+</body>
+</html>
