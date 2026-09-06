@@ -374,13 +374,13 @@ footer{border-top:1px solid var(--line);padding:3rem 0 4rem;background:var(--ink
         <div class="grp-hd"><code>binary_sensor</code><span>State</span></div>
         <div class="row"><span class="nm">Stolen</span><span class="ky">stolen</span><span class="tag">safety</span></div>
         <div class="row"><span class="nm">Crashed</span><span class="ky">crashed</span><span class="tag">safety</span></div>
-        <div class="row"><span class="nm">Battery docked</span><span class="ky">battery_inserted</span><span class="tag">plug</span></div>
+        <div class="row"><span class="nm">Battery</span><span class="ky">battery_inserted</span><span class="tag">plug</span></div>
         <div class="row"><span class="nm">Update available</span><span class="ky">update_available</span><span class="tag off">superseded · disabled</span></div>
       </div>
 
       <div class="grp">
         <div class="grp-hd"><code>device_tracker</code> <code>update</code><span>Position &amp; firmware</span></div>
-        <div class="row"><span class="nm">Bike location</span><span class="ky">GPS source, with accuracy</span><span class="tag">device_tracker</span></div>
+        <div class="row"><span class="nm">Your bike’s name</span><span class="ky">the tracker takes the device name · GPS, with accuracy</span><span class="tag">device_tracker</span></div>
         <div class="row"><span class="nm">Firmware</span><span class="ky">installed vs. deployed release, with notes</span><span class="tag">update</span></div>
       </div>
 
@@ -405,7 +405,7 @@ footer{border-top:1px solid var(--line);padding:3rem 0 4rem;background:var(--ink
       <div class="shot-bar"><i></i><i></i><i></i><span>Settings › Devices &amp; services › Cowboy</span></div>
       <img src="assets/screenshot.png" alt="The Cowboy device page in Home Assistant, showing device info, a sensor list with battery, mileage, battery health and range, a diagnostic device tracker, and a logbook of recent state changes." loading="lazy" width="1600" height="1243">
     </div>
-    <p class="cap">Device page from a live install. Entity names follow the Home Assistant language setting.</p>
+    <p class="cap">A device page from a real install, captured in 2024 &mdash; it predates the trip sensors and the firmware entity, and some names there were renamed by hand.</p>
   </div>
 </section>
 
@@ -420,8 +420,8 @@ footer{border-top:1px solid var(--line);padding:3rem 0 4rem;background:var(--ink
       <div class="step">
         <b>STEP 01</b>
         <h3>Add it from HACS</h3>
-        <p>In <a href="https://hacs.xyz/">HACS</a> &rarr; Integrations, search for <em>Cowboy</em> and download it. Then restart Home Assistant.</p>
-        <p>Rather do it by hand? Copy <code>custom_components/cowboy</code> into your config directory &mdash; the <a href="https://github.com/elsbrock/cowboy-ha#installation-via-hacs">README</a> has the commands.</p>
+        <p>In <a href="https://hacs.xyz/">HACS</a>, search for <em>Cowboy</em> and download it. Then restart Home Assistant.</p>
+        <p>Rather do it by hand? Copy <code>custom_components/cowboy</code> into your Home Assistant config folder &mdash; <a href="https://github.com/elsbrock/cowboy-ha#manual-installation">the README has the commands</a>.</p>
       </div>
       <div class="step">
         <b>STEP 02</b>
@@ -446,6 +446,7 @@ actions:
   - action: notify.mobile_app_phone
     data:
       message: "Charge the bike — {{ states('sensor.otto_remaining_range') }} km left"</pre>
+    <p class="cap" style="text-align:left">Entity ids start with your bike’s name in the Cowboy app &mdash; <code style="font-family:var(--mono)">otto</code> here. Swap in yours.</p>
   </div>
 </section>
 

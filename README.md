@@ -16,7 +16,7 @@ Among others, the following sensors are available:
 - **Remaining Range**: Indicates the estimated remaining range.
 - **Battery Level Sensor**: Monitors the current battery status.
 - **Battery Health**: Gives an indication of the battery's health.
-- **Battery Docked**: Weither or not the battery is inside the bike
+- **Battery**: Whether or not the battery is inside the bike
 - **Usage Duration**: Tracks the total usage duration of the bike.
 - **Software Update Alerts**: Notifies you of available software updates for your bike.
 - **Location Tracking**: Tracks the current position of your Cowboy bike.
@@ -24,6 +24,18 @@ Among others, the following sensors are available:
 ## Installation via HACS
 
 This integration is available in the default HACS catalog and can be installed directly.
+Search for *Cowboy* in HACS, download it, then restart Home Assistant.
+
+### Manual installation
+
+Copy the `custom_components/cowboy` directory into your Home Assistant config folder
+(the one holding `configuration.yaml`) and restart:
+
+```bash
+cd ~/.homeassistant
+git clone https://github.com/elsbrock/cowboy-ha.git
+cp -r cowboy-ha/custom_components/cowboy custom_components/
+```
 
 ## Configuration
 
