@@ -9,5 +9,5 @@ pytest-homeassistant-custom-component==0.13.357
 black
 pylint
 pre-commit
-ruff==0.16.5
+ruff==0.16.7
 colorlog==6.12.0
