@@ -4,7 +4,7 @@
 # single line is what selects the Home Assistant release we test against.
 # 0.13.357 tracks Home Assistant 2026.8.3 (the current stable); later releases
 # track 2026.9 betas.
-pytest-homeassistant-custom-component==0.13.357
+pytest-homeassistant-custom-component==0.13.365
 
 black
 pylint
