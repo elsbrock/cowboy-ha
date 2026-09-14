@@ -188,9 +188,26 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # (DOMAIN, str(bike_id)) so sensor/binary_sensor/device_tracker
         # entities stay linked to the same device across the upgrade.
         dev_reg = dr.async_get(hass)
-        existing_device = dev_reg.async_get_device(
-            identifiers={(DOMAIN, entry.entry_id)}
-        )
+
+        # Prefer the newer helper that looks up a device by identifier if
+        # available; otherwise fall back to scanning entries for the
+        # config_entry. This avoids calling the deprecated
+        # DeviceRegistry.async_get_device(...) which raises in newer HA.
+        existing_device = None
+        try:
+            # Newer Home Assistant exposes a helper to find a device by
+            # identifier tuple.
+            existing_device = dr.async_get_device_by_identifier(
+                dev_reg, (DOMAIN, entry.entry_id)
+            )
+        except Exception:
+            # Backward-compatible fallback: look through devices for this
+            # config entry and match on identifiers.
+            for d in dr.async_entries_for_config_entry(dev_reg, entry.entry_id):
+                if (DOMAIN, entry.entry_id) in d.identifiers:
+                    existing_device = d
+                    break
+
         if existing_device is not None:
             dev_reg.async_update_device(
                 existing_device.id,
