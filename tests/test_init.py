@@ -553,8 +553,8 @@ async def test_migration_preserves_existing_entities_and_device(hass: HomeAssist
         await hass.async_block_till_done()
 
         # Device now keyed on bike_id, but it's the SAME device row.
-        post_device = device_registry.async_get_device(
-            identifiers={(DOMAIN, "789")}
+        post_device = device_registry.async_get_device_by_identifier(
+            (DOMAIN, "789"), v1_entry.entry_id
         )
         assert post_device is not None
         assert post_device.id == pre_device.id

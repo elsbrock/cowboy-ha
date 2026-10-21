@@ -2,8 +2,7 @@
 # Home Assistant itself, pytest and every pytest plugin — to exact versions.
 # Adding our own pins for those here only produces resolver conflicts, so this
 # single line is what selects the Home Assistant release we test against.
-# 0.13.357 tracks Home Assistant 2026.8.3 (the current stable); later releases
-# track 2026.9 betas.
+# 0.13.373 tracks Home Assistant 2026.10.2 (the current stable).
 pytest-homeassistant-custom-component==0.13.373
 
 black
